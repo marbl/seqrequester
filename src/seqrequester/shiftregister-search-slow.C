@@ -1,31 +1,24 @@
 
 /******************************************************************************
  *
- *  This file is part of canu, a software program that assembles whole-genome
- *  sequencing reads into contigs.
+ *  This file is part of seqrequester, a tool for summarizing, extracting,
+ *  generating and modifying DNA sequences.
  *
  *  This software is based on:
- *    'Celera Assembler' (http://wgs-assembler.sourceforge.net)
- *    the 'kmer package' (http://kmer.sourceforge.net)
- *  both originally distributed by Applera Corporation under the GNU General
- *  Public License, version 2.
+ *    'Canu' v2.0              (https://github.com/marbl/canu)
+ *  which is based on:
+ *    'Celera Assembler' r4587 (http://wgs-assembler.sourceforge.net)
+ *    the 'kmer package' r1994 (http://kmer.sourceforge.net)
  *
- *  Canu branched from Celera Assembler at its revision 4587.
- *  Canu branched from the kmer project at its revision 1994.
+ *  Except as indicated otherwise, this is a 'United States Government Work',
+ *  and is released in the public domain.
  *
- *  Modifications by:
- *
- *    Brian P. Walenz beginning on 2020-FEB-10
- *      are a 'United States Government Work', and
- *      are released in the public domain
- *
- *  File 'README.licenses' in the root directory of this distribution contains
- *  full conditions and disclaimers for each license.
+ *  File 'README.licenses' in the root directory of this distribution
+ *  contains full conditions and disclaimers.
  */
 
-#include "sequence/sequence.H"
-#include "sequence/sequence-shiftregister-gf4.H"
-
+#include "seqrequester.H"
+#include "shiftregister-gf4.H"
 #include "bits.H"
 
 
