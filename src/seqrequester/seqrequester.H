@@ -366,6 +366,8 @@ public:
     order  = 0;
     length = 0;
 
+    weight = 0;
+
     memset(sr,    0, sizeof(char) * 65);
     memset(svmin, 0, sizeof(char) * 65);
     memset(svmax, 0, sizeof(char) * 65);
@@ -398,6 +400,8 @@ public:
 
   uint32  order;
   uint64  length;
+
+  uint32  weight;
 
   char    sr[65];
   char    svmin[65];

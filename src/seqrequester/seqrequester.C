@@ -310,6 +310,10 @@ main(int argc, char **argv) {
       srPar.order  = strtouint32(argv[++arg]);
     }
 
+    else if ((mode == modeShift) && (strcmp(argv[arg], "-weight") == 0)) {
+      srPar.weight  = strtouint32(argv[++arg]);
+    }
+
     else if ((mode == modeShift) && (strcmp(argv[arg], "-emit") == 0)) {
       srPar.search = false;
     }
