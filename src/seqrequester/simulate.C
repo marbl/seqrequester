@@ -31,7 +31,7 @@ void
 simulateParameters::finalize() {
 
   if (distribName[0]) {
-    char *path = findSharedFile("share/sequence", distribName);
+    char const *path = findSharedFile("share/sequence", distribName);
 
     if (path == NULL) {
       fprintf(stderr, "ERROR: File '%s' doesn't exist, and not in any data directory I know about.\n", distribName);
