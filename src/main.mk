@@ -1,3 +1,4 @@
+MODULE       :=    seqrequester
 TARGET       := libseqrequester.a
 SOURCES      := utility/src/utility/edlib.C \
                 \

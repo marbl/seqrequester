@@ -384,8 +384,8 @@ ifeq "$(strip ${DESTDIR})" ""
   BUILD_DIR    := $(realpath ..)/build/obj
   TARGET_DIR   := $(realpath ..)/build
 else
-  BUILD_DIR    := $(DESTDIR)/canu/build/obj
-  TARGET_DIR   := $(DESTDIR)/canu/build
+  BUILD_DIR    := $(DESTDIR)/$(MODULE)/build/obj
+  TARGET_DIR   := $(DESTDIR)/$(MODULE)/build
 endif
 
 #
@@ -720,7 +720,7 @@ ${TARGET_DIR}/share/seqrequester/pacbio-hifi: ../share/pacbio-hifi
 #  Makefile processed.  Regenerate the version number file, make some
 #  directories, and report that we're starting the build.
 
-$(eval $(shell ../scripts/version_update.pl seqrequester utility/src/utility/version.H))
+$(eval $(shell ../scripts/version_update.pl $(MODULE) utility/src/utility/version.H))
 
 $(shell mkdir -p ${TARGET_DIR}/share/seqrequester)
 $(shell mkdir -p ${TARGET_DIR}/bin)
