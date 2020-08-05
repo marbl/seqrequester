@@ -399,11 +399,17 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
     dnaSeqFile  *sf1 = new dnaSeqFile(inputs[ff]);
     uint64       num = 0;
 
-    while (sf1->loadSequence(seq1)) {
+    while (sf1->loadSequence(seq1) == true) {
       uint32 of = seqOrder[num].out;
 
       if (of < samPar.numCopies)
-        AS_UTL_writeFastA(outFiles[of], seq1.bases(), seq1.length(), 0, ">%s\n", seq1.name());
+        outputSequence(outFiles[of],
+                       seq1.name(), seq1.bases(), seq1.quals(), seq1.length(),
+                       sf1->isFASTA(),
+                       sf1->isFASTQ(),
+                       samPar.outputFASTA,
+                       samPar.outputFASTQ,
+                       samPar.outputQV);
 
       num += 1;
     }

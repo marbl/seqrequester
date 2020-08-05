@@ -23,27 +23,35 @@
 
 
 uint64
-doExtract_compress(char    *outputString,
-                   uint64   outputStringLen) {
+doExtract_compress(char    *outputBases,
+                   uint8   *outputQuals,
+                   uint64   outputBasesLen) {
 
-  if (outputStringLen == 0)
+  if (outputBasesLen == 0)
     return(0);
 
   uint64  cc = 0;                  //  NOTE:  Also used in stores/sqStore.C
   uint64  rr = 1;
 
-  while (rr < outputStringLen) {
-    if (outputString[cc] == outputString[rr])
+  while (rr < outputBasesLen) {
+    if (outputBases[cc] == outputBases[rr])
       rr++;
-    else
-      outputString[++cc] = outputString[rr++];
+    else {
+      cc++;
+      outputBases[cc] = outputBases[rr];
+      outputQuals[cc] = outputBases[rr];
+      rr++;
+    }
   }
 
-  outputString[++cc] = 0;
+  cc++;
+  outputBases[cc] = 0;
+  outputQuals[cc] = 0;
 
   return(cc);
 
 }
+
 
 
 void
@@ -61,9 +69,10 @@ doExtract(vector<char *>    &inputs,
   uint8          *qlt     = NULL;
   uint64          seqLen  = 0;
 
-  uint64  outputStringLen = 0;
-  uint64  outputStringMax = 0;
-  char   *outputString    = NULL;
+  uint64  outputBasesLen  = 0;
+  uint64  outputBasesMax  = 0;
+  char   *outputBases     = NULL;
+  uint8  *outputQuals     = NULL;
 
   //  Initialize complement. toUpper and toLower arrays.
 
@@ -91,7 +100,7 @@ doExtract(vector<char *>    &inputs,
     for (uint32 ss=0; ss<sf->numberOfSequences(); ss++)
       maxStringLength = max(maxStringLength, sf->sequenceLength(ss));
 
-    resizeArray(outputString, 0, outputStringMax, maxStringLength + 1);
+    resizeArrayPair(outputBases, outputQuals, 0, outputBasesMax, maxStringLength + 1);
 
     //fprintf(stderr, "seqs - length %u first %u %u\n", extPar.seqsBgn.size(), extPar.seqsBgn[0], extPar.seqsEnd[0]);
 
@@ -133,7 +142,7 @@ doExtract(vector<char *>    &inputs,
 
         //fprintf(stderr, "base - length %lu first %lu %lu\n", extPar.baseBgn.size(), extPar.baseBgn[0], extPar.baseEnd[0]);
 
-        outputStringLen = 0;
+        outputBasesLen = 0;
 
         for (uint32 bi=0; bi<extPar.baseBgn.size(); bi++) {
           uint64  bbgn = extPar.baseBgn[bi];
@@ -147,32 +156,42 @@ doExtract(vector<char *>    &inputs,
           if (bbgn == bend)
             continue;
 
-          memcpy(outputString + outputStringLen, seq + bbgn, bend - bbgn);
+          memcpy(outputBases + outputBasesLen, seq + bbgn, bend - bbgn);
+          memcpy(outputQuals + outputBasesLen, qlt + bbgn, bend - bbgn);
 
-          outputStringLen += bend - bbgn;
+          outputBasesLen += bend - bbgn;
         }
 
-        outputString[outputStringLen] = 0;
+        outputBases[outputBasesLen] = 0;
+        outputQuals[outputBasesLen] = 0;
 
-        if (extPar.asReverse)
-          reverse(outputString, outputString + outputStringLen);
+        if (extPar.asReverse) {
+          reverse(outputBases, outputBases + outputBasesLen);
+          reverse(outputQuals, outputQuals + outputBasesLen);
+        }
 
         if (extPar.asComplement)
-          for (uint32 ii=0; ii<outputStringLen; ii++)
-            outputString[ii] = C[outputString[ii]];
+          for (uint32 ii=0; ii<outputBasesLen; ii++)
+            outputBases[ii] = C[outputBases[ii]];
 
         if (extPar.asUpperCase)
-          for (uint32 ii=0; ii<outputStringLen; ii++)
-            outputString[ii] = U[outputString[ii]];
+          for (uint32 ii=0; ii<outputBasesLen; ii++)
+            outputBases[ii] = U[outputBases[ii]];
 
         if (extPar.asLowerCase)
-          for (uint32 ii=0; ii<outputStringLen; ii++)
-            outputString[ii] = L[outputString[ii]];
+          for (uint32 ii=0; ii<outputBasesLen; ii++)
+            outputBases[ii] = L[outputBases[ii]];
 
         if (extPar.asCompressed)
-          outputStringLen = doExtract_compress(outputString, outputStringLen);
+          outputBasesLen = doExtract_compress(outputBases, outputQuals, outputBasesLen);
 
-        fprintf(stdout, ">%s\n%s\n", name, outputString);
+        outputSequence(stdout,
+                       name, outputBases, outputQuals, outputBasesLen,
+                       sf->isFASTA(),
+                       sf->isFASTQ(),
+                       extPar.outputFASTA,
+                       extPar.outputFASTQ,
+                       extPar.outputQV);
       }
     }
 
@@ -186,7 +205,7 @@ doExtract(vector<char *>    &inputs,
   delete [] name;
   delete [] seq;
   delete [] qlt;
-  delete [] outputString;
+  delete [] outputBases;
 }
 
 

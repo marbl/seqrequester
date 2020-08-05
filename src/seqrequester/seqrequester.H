@@ -82,6 +82,10 @@ public:
     doMasking      = false;
 
     maskWithN      = true;
+
+    outputFASTA    = false;
+    outputFASTQ    = false;
+    outputQV       = 20;
   };
 
   ~extractParameters() {
@@ -156,6 +160,10 @@ public:
   bool          doMasking;    //  Mask out any base not in baseBgn/baseEnd with 'N'
 
   bool          maskWithN;    //  Mask with lowercase sequence instead of 'N'
+
+  bool          outputFASTA;
+  bool          outputFASTQ;
+  uint8         outputQV;
 };
 
 
@@ -321,6 +329,10 @@ public:
 
     desiredFraction = 0.0;
 
+    outputFASTA     = false;
+    outputFASTQ     = false;
+    outputQV        = 20;
+
     memset(output1, 0, FILENAME_MAX+1);
     memset(output2, 0, FILENAME_MAX+1);
   }
@@ -348,6 +360,10 @@ public:
   uint64  desiredNumBases;
 
   double  desiredFraction;
+
+  bool    outputFASTA;
+  bool    outputFASTQ;
+  uint8   outputQV;
 
   char    output1[FILENAME_MAX+1];
   char    output2[FILENAME_MAX+1];

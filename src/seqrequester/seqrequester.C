@@ -144,9 +144,15 @@ main(int argc, char **argv) {
       extPar.maskWithN = true;
     }
 
-    else if ((mode == modeExtract) && (strcmp(argv[arg], "") == 0)) {
+    else if ((mode == modeExtract) && (strcmp(argv[arg], "-fasta") == 0)) {
+      extPar.outputFASTA = true;
     }
+    else if ((mode == modeExtract) && (strcmp(argv[arg], "-fastq") == 0)) {
+      extPar.outputFASTQ = true;
 
+      if ((arg+1 < argc) && ('0' <= argv[arg+1][0]) && (argv[arg+1][0] <= '9'))
+        extPar.outputQV = strtouint32(argv[++arg]);
+    }
 
     //  GENERATE
 
@@ -275,6 +281,15 @@ main(int argc, char **argv) {
       strncpy(samPar.output2, argv[  arg], FILENAME_MAX);  //  by '1' or '2' later.
     }
 
+    else if ((mode == modeSample) && (strcmp(argv[arg], "-fasta") == 0)) {
+      samPar.outputFASTA = true;
+    }
+    else if ((mode == modeSample) && (strcmp(argv[arg], "-fastq") == 0)) {
+      samPar.outputFASTQ = true;
+
+      if ((arg+1 < argc) && ('0' <= argv[arg+1][0]) && (argv[arg+1][0] <= '9'))
+        samPar.outputQV = strtouint32(argv[++arg]);
+    }
 
     else if ((mode == modeSample) && (strcmp(argv[arg], "-coverage") == 0)) {      //  Sample reads up to some coverage C
       samPar.desiredCoverage = strtodouble(argv[++arg]);
@@ -477,6 +492,9 @@ main(int argc, char **argv) {
       fprintf(stderr, "  -upcase\n");
       fprintf(stderr, "  -downcase\n");
       fprintf(stderr, "\n");
+      fprintf(stderr, "  -fasta              write output as FASTA\n");
+      fprintf(stderr, "  -fastq [q]          write output as FASTQ; if no quality values, use q (integer, 0-based) for all\n");
+      fprintf(stderr, "\n");
       fprintf(stderr, "  -length min-max     print sequence if it is at least 'min' bases and at most 'max' bases long\n");
       fprintf(stderr, "  \n");
       fprintf(stderr, "                      a 'baselist' is a set of integers formed from any combination\n");
@@ -526,7 +544,10 @@ main(int argc, char **argv) {
       fprintf(stderr, "                      first pair, and so on.\n");
       fprintf(stderr, "\n");
       fprintf(stderr, "  -copies C           write C different copies of the sampling (without replacement).\n");
+      fprintf(stderr, "\n");
       fprintf(stderr, "  -output O           write output sequences to file O.  If paired, two files must be supplied.\n");
+      fprintf(stderr, "  -fasta              write output as FASTA\n");
+      fprintf(stderr, "  -fastq [q]          write output as FASTQ; if no quality values, use q (integer, 0-based) for all\n");
       fprintf(stderr, "\n");
       fprintf(stderr, "  -coverage C         output C coverage of sequences, based on genome size G.\n");
       fprintf(stderr, "  -genomesize G       \n");
