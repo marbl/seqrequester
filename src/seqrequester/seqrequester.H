@@ -329,6 +329,9 @@ public:
 
     desiredFraction = 0.0;
 
+    randomSeedValid = false;
+    randomSeed      = 0;
+
     outputFASTA     = false;
     outputFASTQ     = false;
     outputQV        = 20;
@@ -360,6 +363,9 @@ public:
   uint64  desiredNumBases;
 
   double  desiredFraction;
+
+  bool    randomSeedValid;
+  uint64  randomSeed;
 
   bool    outputFASTA;
   bool    outputFASTQ;

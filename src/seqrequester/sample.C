@@ -360,6 +360,9 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
 
   mtRandom          MT;
 
+  if (samPar.randomSeedValid)
+    MT.mtSetSeed(samPar.randomSeed);
+
   //  Open output files. If paired, replace #'s in the output names with 1 or 2.
 
   FILE **outFiles = new FILE * [samPar.numCopies];

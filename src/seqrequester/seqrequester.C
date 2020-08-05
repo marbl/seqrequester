@@ -315,6 +315,11 @@ main(int argc, char **argv) {
       samPar.desiredFraction = strtodouble(argv[++arg]);
     }
 
+    else if ((mode == modeSample) && (strcmp(argv[arg], "-seed") == 0)) {          //  Seed for pseudo random number generator
+      samPar.randomSeedValid = true;
+      samPar.randomSeed      = strtouint64(argv[++arg]);
+    }
+
     //  SHIFT
 
     else if (strcmp(argv[arg], "shift") == 0) {
