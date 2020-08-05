@@ -58,8 +58,20 @@ searchShiftRegisterFast(shiftRegisterParameters &srPar) {
 
   for (uint64 sv = svmin; sv <= svmax; sv++) {
 
+    if ((sv % 99999999) == 0)
+      fprintf(stderr, "%0*lo cycle %14lu / %14lu - %6.2f%% - %0*lo\r",
+              srPar.order, expandTo3(sv),
+              cyclen,
+              cycmax,
+              100.0 * cyclen / cycmax,
+              srPar.order, expandTo3(sr));
+
+
     //  Count the number of taps.  If this is different than the requested
     //  weight, skip it.
+
+
+    //  EXTREMELY SLOW at high order
 
     if (srPar.weight > 0) {
       uint64 svwl  = (sv & 0x5555555555555555llu);   //  Low  order bits of each tap.
