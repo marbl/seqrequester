@@ -365,12 +365,16 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
 
   //  Open output files. If paired, replace #'s in the output names with 1 or 2.
 
+  fprintf(stderr, "Opening %u output file%s.\n", samPar.numCopies, (samPar.numCopies == 1) ? "" : "s");
+
   FILE **outFiles = new FILE * [samPar.numCopies];
 
   for (uint32 ii=0; ii<samPar.numCopies; ii++)
     outFiles[ii] = doSample_single_openOutput(samPar, ii);
 
   //  Scan the inputs, saving the number of sequences in each and the length of each sequence.
+
+  fprintf(stderr, "Scanning %lu input file%s.\n", inputs.size(), (inputs.size() == 1) ? "" : "s");
 
   dnaSeq   seq1;
 
@@ -385,7 +389,12 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
       numBasesTotal += seq1.length();
 
       num += 1;
+
+      if ((num % 61075) == 0)
+        fprintf(stderr, "  %10lu sequences in '%s'\r", num, inputs[ff]);
     }
+
+    fprintf(stderr, "  %10lu sequences in '%s'\n", num, inputs[ff]);
 
     numSeqsPerFile.push_back(num);
 
@@ -394,9 +403,13 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
 
   //  Figure out what to output.
 
+  fprintf(stderr, "Randomizing.\n");
+
   doSample_sample(samPar, numSeqsTotal, numBasesTotal, seqOrder);
 
   //  Scan the inputs again, this time emitting sequences if their saved length isn't zero.
+
+  fprintf(stderr, "Writing outputs.\n");
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
     dnaSeqFile  *sf1 = new dnaSeqFile(inputs[ff]);
@@ -414,14 +427,21 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
                        samPar.outputFASTQ,
                        samPar.outputQV);
 
-      num += 1;
+      if ((++num % 61075) == 0)
+        fprintf(stderr, "  %10lu sequences in '%s'\r", num, inputs[ff]);
     }
+
+    fprintf(stderr, "  %10lu sequences in '%s'\n", num, inputs[ff]);
 
     delete sf1;
   }
 
+  fprintf(stderr, "Closing %u output file%s.\n", samPar.numCopies, (samPar.numCopies == 1) ? "" : "s");
+
   for (uint32 ii=0; ii<samPar.numCopies; ii++)
     AS_UTL_closeFile(outFiles[ii], samPar.output1);
+
+  fprintf(stderr, "Done.\n");
 }
 
 
