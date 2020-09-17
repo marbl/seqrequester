@@ -57,22 +57,16 @@ doExtract_compress(char    *outputBases,
 void
 doExtract(vector<char *>    &inputs,
           extractParameters &extPar) {
+  char      C[256] = {0};
+  char      U[256] = {0};
+  char      L[256] = {0};
 
-  char            C[256] = {0};
-  char            U[256] = {0};
-  char            L[256] = {0};
+  dnaSeq    seq;
 
-  uint32          nameMax = 0;
-  char           *name    = NULL;
-  uint64          seqMax  = 0;
-  char           *seq     = NULL;
-  uint8          *qlt     = NULL;
-  uint64          seqLen  = 0;
-
-  uint64  outputBasesLen  = 0;
-  uint64  outputBasesMax  = 0;
-  char   *outputBases     = NULL;
-  uint8  *outputQuals     = NULL;
+  uint64    outputBasesLen  = 0;
+  uint64    outputBasesMax  = 0;
+  char     *outputBases     = NULL;
+  uint8    *outputQuals     = NULL;
 
   //  Initialize complement. toUpper and toLower arrays.
 
@@ -102,8 +96,6 @@ doExtract(vector<char *>    &inputs,
 
     resizeArrayPair(outputBases, outputQuals, 0, outputBasesMax, maxStringLength + 1);
 
-    //fprintf(stderr, "seqs - length %u first %u %u\n", extPar.seqsBgn.size(), extPar.seqsBgn[0], extPar.seqsEnd[0]);
-
     for (uint32 si=0; si<extPar.seqsBgn.size(); si++) {
       uint64  sbgn = extPar.seqsBgn[si];
       uint64  send = extPar.seqsEnd[si];
@@ -111,12 +103,8 @@ doExtract(vector<char *>    &inputs,
       sbgn = min(sbgn, sf->numberOfSequences());
       send = min(send, sf->numberOfSequences());
 
-      //fprintf(stderr, "sbgn %lu send %lu\n", sbgn, send);
-
       for (uint32 ss=sbgn; ss<send; ss++) {
         uint64  seqLen = sf->sequenceLength(ss);
-
-        //fprintf(stderr, "lens - length %lu first %lu %lu\n", extPar.lensBgn.size(), extPar.lensBgn[0], extPar.lensEnd[0]);
 
         for (uint32 li=0; li<extPar.lensBgn.size(); li++) {
           uint64  lmin = extPar.lensBgn[li];
@@ -131,16 +119,14 @@ doExtract(vector<char *>    &inputs,
           continue;
 
         if (sf->findSequence(ss) == false) {
-          //fprintf(stderr, "Failed to find sequence #%u in file '%s'\n", ss, inputs[fi]);
+          fprintf(stderr, "Failed to find sequence #%u in file '%s'\n", ss, inputs[fi]);
           continue;
         }
 
-        if (sf->loadSequence(name, nameMax, seq, qlt, seqMax, seqLen) == false) {
-          //fprintf(stderr, "Failed to load sequence #%u in file '%s'\n", ss, inputs[fi]);
+        if (sf->loadSequence(seq) == false) {
+          fprintf(stderr, "Failed to load sequence #%u in file '%s'\n", ss, inputs[fi]);
           continue;
         }
-
-        //fprintf(stderr, "base - length %lu first %lu %lu\n", extPar.baseBgn.size(), extPar.baseBgn[0], extPar.baseEnd[0]);
 
         outputBasesLen = 0;
 
@@ -151,13 +137,11 @@ doExtract(vector<char *>    &inputs,
           bbgn = min(bbgn, seqLen);
           bend = min(bend, seqLen);
 
-          //fprintf(stderr, "base - seqLen %lu base[%u] %lu %lu limited %lu %lu\n", seqLen, bi, extPar.baseBgn[bi], extPar.baseEnd[bi], bbgn, bend);
-
           if (bbgn == bend)
             continue;
 
-          memcpy(outputBases + outputBasesLen, seq + bbgn, bend - bbgn);
-          memcpy(outputQuals + outputBasesLen, qlt + bbgn, bend - bbgn);
+          memcpy(outputBases + outputBasesLen, seq.bases() + bbgn, bend - bbgn);
+          memcpy(outputQuals + outputBasesLen, seq.quals() + bbgn, bend - bbgn);
 
           outputBasesLen += bend - bbgn;
         }
@@ -186,7 +170,7 @@ doExtract(vector<char *>    &inputs,
           outputBasesLen = doExtract_compress(outputBases, outputQuals, outputBasesLen);
 
         outputSequence(stdout,
-                       name, outputBases, outputQuals, outputBasesLen,
+                       seq.name(), outputBases, outputQuals, outputBasesLen,
                        sf->isFASTA(),
                        sf->isFASTQ(),
                        extPar.outputFASTA,
@@ -202,13 +186,6 @@ doExtract(vector<char *>    &inputs,
 
   //  Cleanup.
 
-  delete [] name;
-  delete [] seq;
-  delete [] qlt;
   delete [] outputBases;
+  delete [] outputQuals;
 }
-
-
-
-
-

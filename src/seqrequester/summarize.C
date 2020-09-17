@@ -29,9 +29,10 @@ doSummarize_loadSequence(dnaSeqFile  *sf,
                          char       *&seq,
                          uint8      *&qlt,    uint64    &seqMax,
                          uint64      &seqLen) {
+  uint32 error = 0;
 
   if (asSequences)
-    return(sf->loadSequence(name, nameMax, seq, qlt, seqMax, seqLen));
+    return(sf->loadSequence(name, nameMax, seq, qlt, seqMax, seqLen, error));
 
   //  Otherwise, piece it together from multiple calls to get bases.
   //  loadBases() returns true if bases were loaded, and sets endOfSeq
