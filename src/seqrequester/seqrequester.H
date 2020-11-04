@@ -136,6 +136,12 @@ public:
     for (uint32 bi=0; bi<baseBgn.size(); bi++) {
       if (baseBgn[bi] == baseEnd[bi])
         baseEnd[bi] += 1;
+
+      if (baseEnd[bi] <= baseBgn[bi]) {
+        fprintf(stderr, "ERROR: base range %lu-%lu is invalid, must be increasing.\n",
+                baseBgn[bi], baseEnd[bi]);
+        exit(1);
+      }
     }
   };
 
