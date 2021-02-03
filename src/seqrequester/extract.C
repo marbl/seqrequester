@@ -170,7 +170,7 @@ doExtract(vector<char *>    &inputs,
           outputBasesLen = doExtract_compress(outputBases, outputQuals, outputBasesLen);
 
         outputSequence(stdout,
-                       seq.name(), outputBases, outputQuals, outputBasesLen,
+                       seq.ident(), outputBases, outputQuals, outputBasesLen,
                        sf->isFASTA(),
                        sf->isFASTQ(),
                        extPar.outputFASTA,

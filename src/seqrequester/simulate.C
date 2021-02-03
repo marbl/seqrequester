@@ -186,7 +186,7 @@ doSimulate_extract(simulateParameters &simPar,
               (flip == false) ? "forward" : "reverse",
               position,
               readLength,
-              seqs[ss]->name());
+              seqs[ss]->ident());
       fprintf(stdout, "%s\n", r);
 
       break;
