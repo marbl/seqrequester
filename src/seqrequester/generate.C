@@ -50,7 +50,7 @@ doGenerate(generateParameters &genPar) {
     seqLen = (uint64)round(len);
 
     if (seqLen+1 >= seqMax)
-      resizeArrayPair(seq, qlt, 0, seqMax, seqLen+1, resizeArray_doNothing);
+      resizeArrayPair(seq, qlt, 0, seqMax, seqLen+1);
 
     for (uint64 ii=0; ii<seqLen; ii++) {
       double  bp = MT.mtRandomRealOpen();

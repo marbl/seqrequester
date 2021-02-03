@@ -44,7 +44,7 @@ doSummarize_loadSequence(dnaSeqFile  *sf,
   bool     endOfSeq  = false;
 
   resizeArray(name, 0, nameMax, (uint32)1024);
-  resizeArrayPair(seq, qlt, 0, seqMax, seqLen+1, resizeArray_doNothing);
+  resizeArrayPair(seq, qlt, 0, seqMax, seqLen+1);
 
   name[0] = 0;
   seq[0]  = 0;

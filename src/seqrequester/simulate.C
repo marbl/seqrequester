@@ -103,7 +103,7 @@ doSimulate_extract(simulateParameters &simPar,
     //
     uint32  readLength    = simPar.dist.getValue(mt.mtRandomRealOpen());
 
-    resizeArray(r, 0, rMax, readLength+1, resizeArray_doNothing);
+    resizeArray(r, 0, rMax, readLength+1);
 
     //  For normal non-circular references, we cannot start a read in the
     //  last few bases of the sequence.  But we can for circular references.
