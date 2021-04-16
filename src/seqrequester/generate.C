@@ -40,6 +40,12 @@ doGenerate(generateParameters &genPar) {
   double Gthresh = genPar.aFreq + genPar.cFreq + genPar.gFreq;
   double Tthresh = genPar.aFreq + genPar.cFreq + genPar.gFreq + genPar.tFreq;
 
+  if (genPar.randomSeedValid)
+    MT.mtSetSeed(genPar.randomSeed);
+
+  if (genPar.ident == nullptr)
+    genPar.ident = duplicateString("random%08lu");
+
   while ((nSeqs  < genPar.nSeqs) &&
          (nBases < genPar.nBases)) {
     double   len = MT.mtRandomGaussian(genPar.gMean, genPar.gStdDev);
@@ -76,9 +82,7 @@ doGenerate(generateParameters &genPar) {
     seq[seqLen] = 0;
     qlt[seqLen] = 0;
 
-    AS_UTL_writeFastA(stdout,
-                      seq, seqLen, 0,
-                      ">random%08 " F_U64P "\n", nSeqs);
+    outputFASTA(stdout, seq, seqLen, 0, genPar.ident, nSeqs);
 
     nSeqs  += 1;
     nBases += seqLen;

@@ -171,7 +171,6 @@ doExtract(vector<char *>    &inputs,
 
         outputSequence(stdout,
                        seq.ident(), outputBases, outputQuals, outputBasesLen,
-                       sf->isFASTA(),
                        sf->isFASTQ(),
                        extPar.outputFASTA,
                        extPar.outputFASTQ,

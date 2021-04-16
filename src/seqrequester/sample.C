@@ -258,8 +258,8 @@ doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
       uint32 of = seqOrder[num].out;
 
       if (of < samPar.numCopies) {
-        AS_UTL_writeFastA(outFile1, seq1.bases(), seq1.length(), 0, ">%s\n", seq1.ident());
-        AS_UTL_writeFastA(outFile2, seq2.bases(), seq2.length(), 0, ">%s\n", seq2.ident());
+        outputFASTA(outFile1, seq1.bases(), seq1.length(), 0, seq1.ident());
+        outputFASTA(outFile2, seq2.bases(), seq2.length(), 0, seq2.ident());
       }
 
       num += 1;
@@ -421,7 +421,6 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
       if (of < samPar.numCopies)
         outputSequence(outFiles[of],
                        seq1.ident(), seq1.bases(), seq1.quals(), seq1.length(),
-                       sf1->isFASTA(),
                        sf1->isFASTQ(),
                        samPar.outputFASTA,
                        samPar.outputFASTQ,

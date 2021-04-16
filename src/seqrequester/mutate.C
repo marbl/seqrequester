@@ -150,7 +150,7 @@ doMutate(vector<char *> &inputs, mutateParameters &mutPar) {
 
       //  All done changing.  Output the modified read.
 
-      AS_UTL_writeFastA(stdout, nBases, oLen, 0, ">%s\n", seq.ident());
+      outputFASTA(stdout, nBases, oLen, 0, seq.ident());
     }
 
     delete sf;

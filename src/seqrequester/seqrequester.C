@@ -160,6 +160,15 @@ main(int argc, char **argv) {
       mode = modeGenerate;
     }
 
+    else if ((mode == modeGenerate) && (strcmp(argv[arg], "-seed") == 0)) {
+      genPar.randomSeedValid = true;
+      genPar.randomSeed      = strtouint32(argv[++arg]);
+    }
+
+    else if ((mode == modeGenerate) && (strcmp(argv[arg], "-ident") == 0)) {
+      genPar.ident = argv[++arg];
+    }
+
     else if ((mode == modeGenerate) && (strcmp(argv[arg], "-min") == 0)) {
       genPar.minLength = strtouint64(argv[++arg]);
     }
@@ -317,7 +326,7 @@ main(int argc, char **argv) {
 
     else if ((mode == modeSample) && (strcmp(argv[arg], "-seed") == 0)) {          //  Seed for pseudo random number generator
       samPar.randomSeedValid = true;
-      samPar.randomSeed      = strtouint64(argv[++arg]);
+      samPar.randomSeed      = strtouint32(argv[++arg]);
     }
 
     //  SHIFT
@@ -564,22 +573,26 @@ main(int argc, char **argv) {
       fprintf(stderr, "\n");
       fprintf(stderr, "  -fraction F         output fraction F of the input bases.\n");
       fprintf(stderr, "\n");
+      fprintf(stderr, "  -seed s        seed the pseudo-random number generate with integer 's'\n");
+      fprintf(stderr, "\n");
     }
 
     if ((mode == modeUnset) || (mode == modeGenerate)) {
       fprintf(stderr, "OPTIONS for generate mode:\n");
+      fprintf(stderr, "  -ident S       name reads using printf() pattern in S; default 'random%%08lu'\n");
       fprintf(stderr, "  -min M         minimum sequence length\n");
       fprintf(stderr, "  -max M         maximum sequence length\n");
       fprintf(stderr, "  -sequences N   generate N sequences\n");
       fprintf(stderr, "  -bases B       generate at least B bases, no more than B+maxLength-1 bases.\n");
       fprintf(stderr, "  -gaussian      99.73%% of the reads (3 standard deviations) will be between min and max\n");
-      fprintf(stderr, "  -mirror F      \n");
+      fprintf(stderr, "  -mirror F      (not implemented; mirror the length distrib of F)\n");
       fprintf(stderr, "  -gc bias       sets GC/AT composition (default 0.50)\n");
       fprintf(stderr, "  -at bias       sets GC/AT composition (default 0.50)\n");
       fprintf(stderr, "  -a freq        sets frequency of A bases (default 0.25)\n");
       fprintf(stderr, "  -c freq        sets frequency of C bases (default 0.25)\n");
       fprintf(stderr, "  -g freq        sets frequency of G bases (default 0.25)\n");
       fprintf(stderr, "  -t freq        sets frequency of T bases (default 0.25)\n");
+      fprintf(stderr, "  -seed s        seed the pseudo-random number generate with integer 's'\n");
       fprintf(stderr, "\n");
       fprintf(stderr, "The -gc option is a shortcut for setting all four base frequencies at once.  Order matters!\n");
       fprintf(stderr, "  -gc 0.6 -a 0.1 -t 0.3 -- sets G = C = 0.3, A = 0.1, T = 0.3\n");

@@ -177,11 +177,16 @@ public:
 class generateParameters {
 public:
   generateParameters() {
+    ident                 = nullptr;
+
     minLength             = 0;
     maxLength             = 10000;
 
     nSeqs                 = 0;
     nBases                = 0;
+
+    randomSeedValid       = false;
+    randomSeed            = 0;
 
     useGaussian           = true;
     gMean                 = 0;
@@ -244,30 +249,34 @@ public:
     tFreq /= fSum;
   };
 
+  char const  *ident;
 
-  uint64    minLength;
-  uint64    maxLength;
+  uint64       minLength;
+  uint64       maxLength;
 
-  uint64    nSeqs;
-  uint64    nBases;
+  uint64       nSeqs;
+  uint64       nBases;
 
-  bool      useGaussian;
-  double    gMean;
-  double    gStdDev;
+  bool         randomSeedValid;
+  uint32       randomSeed;
 
-  bool      useExponential;
+  bool         useGaussian;
+  double       gMean;
+  double       gStdDev;
 
-  bool      useMirror;
-  char     *mirrorInput;
-  double    mirrorDistribution;
-  uint64    mirrorDistributionLen;
-  uint64    mirrorDistributionMax;
-  uint64    mirrorDistributionSum;
+  bool         useExponential;
 
-  double    aFreq;
-  double    cFreq;
-  double    gFreq;
-  double    tFreq;
+  bool         useMirror;
+  char        *mirrorInput;
+  double       mirrorDistribution;
+  uint64       mirrorDistributionLen;
+  uint64       mirrorDistributionMax;
+  uint64       mirrorDistributionSum;
+
+  double       aFreq;
+  double       cFreq;
+  double       gFreq;
+  double       tFreq;
 };
 
 
@@ -371,7 +380,7 @@ public:
   double  desiredFraction;
 
   bool    randomSeedValid;
-  uint64  randomSeed;
+  uint32  randomSeed;
 
   bool    outputFASTA;
   bool    outputFASTQ;
