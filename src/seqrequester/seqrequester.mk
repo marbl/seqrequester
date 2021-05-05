@@ -2,6 +2,7 @@ TARGET   := seqrequester
 SOURCES  := seqrequester.C \
             extract.C \
             generate.C \
+            microsatellite.C \
             mutate.C \
             sample.C \
             shiftregister.C \

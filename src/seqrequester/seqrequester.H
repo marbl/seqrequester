@@ -33,6 +33,7 @@ using namespace std;
 
 #include "extract.H"
 #include "generate.H"
+#include "microsatellite.H"
 #include "mutate.H"
 #include "sample.H"
 #include "shiftregister.H"
@@ -42,10 +43,11 @@ using namespace std;
 #undef  SEQREQUESTER_INCLUDE_H
 
 
-void doSummarize    (vector<char *> &inputs, summarizeParameters     &sumPar);
-void doExtract      (vector<char *> &inputs, extractParameters       &extPar);
-void doGenerate     (                        generateParameters      &genPar);
-void doSimulate     (vector<char *> &inputs, simulateParameters      &simPar);
-void doSample       (vector<char *> &inputs, sampleParameters        &samPar);
-void doShiftRegister(                        shiftRegisterParameters &srPar);
-void doMutate       (vector<char *> &inputs, mutateParameters        &mutPar);
+void doSummarize     (vector<char *> &inputs, summarizeParameters       &sumPar);
+void doExtract       (vector<char *> &inputs, extractParameters         &extPar);
+void doGenerate      (                        generateParameters        &genPar);
+void doSimulate      (vector<char *> &inputs, simulateParameters        &simPar);
+void doSample        (vector<char *> &inputs, sampleParameters          &samPar);
+void doShiftRegister (                        shiftRegisterParameters   &srPar);
+void doMicroSatellite(vector<char *> &inputs, microsatelliteParameters  &msPar);
+void doMutate        (vector<char *> &inputs, mutateParameters          &mutPar);

@@ -23,14 +23,15 @@
 
 
 enum opMode {
-  modeSummarize,     //  Summarize sequences in FASTA or FASTQ inputs
-  modeExtract,       //  Extract sequences or subsequences from FASTA or FASTQ inputs
-  modeGenerate,      //  Generate random sequences
-  modeSimulate,      //  Simulate reads from FASTA or FASTQ inputs (ontigs/scaffolds/chromosomes)
-  modeSample,        //  Extract random sequences from FASTA or FASTQ inputs
-  modeShift,         //  Generate sequence based on a shift register
-  modeMutate,        //  Randomly mutate bases
-  modeUnset          //  Cause an error
+  modeSummarize,       //  Summarize sequences in FASTA or FASTQ inputs
+  modeExtract,         //  Extract sequences or subsequences from FASTA or FASTQ inputs
+  modeGenerate,        //  Generate random sequences
+  modeSimulate,        //  Simulate reads from FASTA or FASTQ inputs (ontigs/scaffolds/chromosomes)
+  modeSample,          //  Extract random sequences from FASTA or FASTQ inputs
+  modeShift,           //  Generate sequence based on a shift register
+  modeMicroSatellite,  //  Find microsatellite repeats
+  modeMutate,          //  Randomly mutate bases
+  modeUnset            //  Cause an error
 };
 
 
@@ -47,6 +48,7 @@ main(int argc, char **argv) {
   simulateParameters          simPar;
   sampleParameters            samPar;
   shiftRegisterParameters     srPar;
+  microsatelliteParameters    msPar;
   mutateParameters            mutPar;
 
   argc = AS_configure(argc, argv);
@@ -382,6 +384,35 @@ main(int argc, char **argv) {
     else if ((mode == modeShift) && (strcmp(argv[arg], "") == 0)) {
     }
 
+    //  MICROSATELLITE
+
+    else if ((strcmp(argv[arg], "microsatellite") == 0) ||
+             (strcmp(argv[arg], "microsat") == 0)) {
+      mode = modeMicroSatellite;
+    }
+
+    else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-prefix") == 0)) {
+      msPar.outPrefix = argv[++arg];
+    }
+
+    else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-window") == 0)) {
+      msPar.window = strtouint32(argv[++arg]);
+    }
+
+    else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-ga") == 0)) {
+      msPar.report_ga = true;
+    }
+    else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-gc") == 0)) {
+      msPar.report_gc = true;
+    }
+    else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-at") == 0)) {
+      msPar.report_at = true;
+    }
+
+    else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-legacy") == 0)) {
+      msPar.report_legacy = true;
+    }
+
     //  MUTATE
 
     else if (strcmp(argv[arg], "mutate") == 0) {
@@ -461,6 +492,14 @@ main(int argc, char **argv) {
   }
   if  (mode == modeMutate) {
   }
+  if  (mode == modeMicroSatellite) {
+    if (inputs.size() == 0)
+      err.push_back("ERROR:  No input sequence files supplied.\n");
+    if ((msPar.report_ga == false) &&
+        (msPar.report_gc == false) &&
+        (msPar.report_at == false))
+      err.push_back("ERROR:  No microsatellite pattern supplied.\n");
+  }
 
   //  If errors, report usage.
 
@@ -474,6 +513,7 @@ main(int argc, char **argv) {
       fprintf(stderr, "  extract        extract the specified sequences\n");
       fprintf(stderr, "  sample         emit existing sequences randomly\n");
       fprintf(stderr, "  generate       generate random sequences\n");
+      fprintf(stderr, "  microsatellite compute microsatellite percent per window size\n");
       fprintf(stderr, "  simulate       errors in existing sequences\n");
       fprintf(stderr, "\n");
     }
@@ -609,6 +649,16 @@ main(int argc, char **argv) {
       fprintf(stderr, "\n");
     }
 
+    if ((mode == modeUnset) || (mode == modeMicroSatellite)) {
+      fprintf(stderr, "OPTIONS for microsatellite mode:\n");
+      fprintf(stderr, "  -prefix P      write output to <P>.<pattern>.bed\n");
+      fprintf(stderr, "  -window w      compute in windows of size w; default write output to <prefix.<pattern>.bed\n");
+
+      fprintf(stderr, "  -ga            compute GA/TC repeat content\n");
+      fprintf(stderr, "  -gc            compute GC repeat content\n");
+      fprintf(stderr, "  -at            compute AT repeat content\n");
+    }
+
     for (uint32 ii=0; ii<err.size(); ii++)
       if (err[ii])
         fputs(err[ii], stderr);
@@ -639,6 +689,9 @@ main(int argc, char **argv) {
       break;
     case modeShift:
       doShiftRegister(srPar);
+      break;
+    case modeMicroSatellite:
+      doMicroSatellite(inputs, msPar);
       break;
     case modeMutate:
       doMutate(inputs, mutPar);

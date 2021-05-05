@@ -16,321 +16,212 @@
  *  contains full conditions and disclaimers.
  */
 
-#include "runtime.H"
-
-#include "kmers.H"
+#include "seqrequester.H"
 #include "sequence.H"
-#include "bits.H"
 
-#define OP_NONE   0
-#define OP_GA     1
-#define OP_GC     2
-#define OP_AT     3
+#include "outAT.C"
+#include "outGC.C"
+#include "outGA.C"
+
 
 void
-outAT(dnaSeqFile*   seqFile,
-      char*         outPrefix,
-      bool          verbose,
-      int           window) {
+computeMicroSat(dnaSeq    &seq,
+                char const f1, char const f2, FILE *fwdBfile, FILE *fwdWfile,
+                char const r1, char const r2, FILE *revBfile, FILE *revWfile,
+                uint32     window) {
 
-  char    outName[FILENAME_MAX+1];
-  sprintf(outName, "%s.AT.bed", outPrefix);
-  FILE *f = AS_UTL_openOutputFile(outName);
+  bool    hasf1 = false, hasf2 = false;
+  bool    hasr1 = false, hasr2 = false;
 
-  sprintf(outName, "%s.AT.%u.bed", outPrefix, window);
-  FILE *fw = AS_UTL_openOutputFile(outName);
+  //  Allocate and clear output.
+  //
+  //  We save counts for both the forward and reverse patterns.
 
-  dnaSeq    seq;
+  char const *bases    = seq.bases();
+  uint64      basesLen = seq.length();
 
-  while (seqFile->loadSequence(seq) == true) {
-    const char* bases = seq.bases();
+  uint32      wcMax    = basesLen / window + 1;
+  uint32     *wcf      = new uint32 [wcMax];
+  uint32     *wcr      = new uint32 [wcMax];
 
-    bool    hasA = false, hasT = false, inAT = false;
-    int64    beg = -1, end = -1;
-
-    int     winMax = seq.length()/window; 
-    uint32  atWinCounts[winMax];
-    for (uint32 ii = 0; ii < winMax; ii++)
-        atWinCounts[ii] = 0;
-
-    fprintf(stderr, "Processing %s\n", seq.ident());
-
-    for (uint32 ii=0; ii<seq.length(); ii++) {
-
-      switch (bases[ii]) {
-        case 'a':  //  A
-        case 'A':
-          hasA = true;
-          inAT = true;
-          if (beg == -1)  beg = ii;
-          end = ii + 1;
-          break;
-        case 't':  //  T
-        case 'T':
-          hasT = true;
-          inAT = true;
-          if (beg == -1)  beg = ii;
-          end = ii + 1;
-          break;
-        default :
-          inAT = false;
-          break;
-      }
-
-      if (!inAT) {
-        // is not in GC anymore, but had C and G
-        if (hasA && hasT) {
-          fprintf(f, "%s\t%lu\t%lu\n", seq.ident(), beg, end);
-          for (uint32 jj = beg; jj < end; jj++)     // count for each pos
-              atWinCounts[jj/window]++;
-        }
-
-        // reset
-        beg = -1;
-        hasA = false;
-        hasT = false;
-      }
-    }
-
-    //  end of sequence for loop
-    //  before going to the next chr, write down if there was a GC
-    if  (hasA && hasT) {
-        fprintf(f, "%s\t%lu\t%lu\n", seq.ident(), beg, end);
-        for (uint32 jj = beg; jj < end; jj++)     // count for each pos
-            atWinCounts[jj/window]++;
-    }
-
-    for (uint32 ii = 0; ii < winMax; ii++)
-        fprintf(fw, "%s\t%u\t%u\t%u\t%.2f\n", seq.ident(), ii*window, (ii+1) * window, atWinCounts[ii], ((float) atWinCounts[ii] * 100) / window);
+  for (uint32 ii = 0; ii < wcMax; ii++) {
+    wcf[ii] = 0;
+    wcr[ii] = 0;
   }
-  fclose(f);
-  fclose(fw);
+
+  //  Some state variables.
+
+  uint32   inf = 0;   //  In a forward run, and which letters we've seen.
+  uint32   inr = 0;   //  In a revcomp run, and which letters we've seen.
+
+  //  Process.
+  //
+  //  Iterate over all the bases PLUS ONE ADDITIONAL letter (expected to be a
+  //  NUL byte) to terminate whatever runs we have open.
+
+  uint64   begf = uint64max,  endf = 0;
+  uint64   begr = uint64max,  endr = 0;
+
+  assert(bases[basesLen] == 0);
+
+  for (uint32 ii=0; ii <= basesLen; ii++) {
+    char  bp = 0;
+
+    if (ii < basesLen)                  //  Grab sequence if not past the end; if we
+      bp = bases[ii];                   //  are past, do one more loop to close runs.
+
+    //  If a match to the forward letters:
+
+    if      (bp == f1) {                //  If we find the first letter, set the
+      begf  = (inf == 0) ? ii : begf;   //  the begin position if this is the
+      endf  =              ii;          //  first letter of the run, update the end
+      inf  |= 0x01;                     //  position to the current location, and
+    }                                   //  remember we've seen the first letter.
+
+    else if (bp == f2) {
+      begf  = (inf == 0) ? ii : begf;
+      endf  =              ii;
+      inf   |= 0x02;
+    }
+
+    else {                                     //  If no match to either the first
+      if (inf == 0x03) {                       //  or second letter and we just exited
+        for (uint32 jj=begf; jj<=endf; jj++)   //  a run, increment window counts.
+          wcf[ jj/window ]++;                  //
+        if (fwdBfile)
+          fprintf(fwdBfile, "%s\t%lu\t%lu\n", seq.ident(), begf, endf+1);
+        assert(endf / window < wcMax);
+      }
+      inf = 0;                                 //  But always reset the 'in a run' flag
+    }                                          //  since we're no longer in a run.
+
+    //  If a match to the reverse letters:
+
+    if      (bp == r1) {
+      begr  = (inr == 0) ? ii : begr;
+      endr  =              ii;
+      inr  |= 0x01;
+    }
+
+    else if (bp == r2) {
+      begr  = (inr == 0) ? ii : begr;
+      endr  =              ii;
+      inr   |= 0x02;
+    }
+
+    else {
+      if (inr == 0x03) {
+        for (uint32 jj=begr; jj<=endr; jj++)
+          wcr[ jj/window ]++;
+        if (revBfile)
+          fprintf(revBfile, "%s\t%lu\t%lu\n", seq.ident(), begr, endr+1);
+        assert(endr / window < wcMax);
+      }
+      inr = 0;
+    }
+  }
+
+  //  Done scanning the sequence.  Output results.  If the file isn't opened,
+  //  don't output.
+
+  if (fwdWfile) {
+    for (uint32 ww=0; ww<wcMax; ww++)
+      fprintf(fwdWfile, "%s\t%u\t%u\t%u\t%.2f\n",
+              seq.ident(), 
+              ww * window, ww * window + window,
+              wcf[ww],
+              wcf[ww] * 100.0 / window);
+  }
+
+  if (revWfile) {
+    for (uint32 ww=0; ww<wcMax; ww++)
+      fprintf(revWfile, "%s\t%u\t%u\t%u\t%.2f\n",
+              seq.ident(), 
+              ww * window, ww * window + window,
+              wcr[ww],
+              wcr[ww] * 100.0 / window);
+  }
 }
 
-void
-outGC(dnaSeqFile*   seqFile,
-      char*         outPrefix,
-      bool          verbose,
-      int           window) {
 
-  char    outName[FILENAME_MAX+1];
-  sprintf(outName, "%s.GC.bed", outPrefix);
-  FILE *fGC = AS_UTL_openOutputFile(outName);
-
-  sprintf(outName, "%s.GC.%u.bed", outPrefix, window);
-  FILE *fGCw = AS_UTL_openOutputFile(outName);
-
-  dnaSeq    seq;
-  uint64    seqIdx = 0;
-
-  while (seqFile->loadSequence(seq) == true) {
-    seqIdx  = seqFile->seqIdx();
-    const char* bases = seq.bases();
-
-    bool    hasC = false, hasG = false, inGC = false;
-    int64    beg = -1, end = -1;
-
-    int     winMax = seq.length()/window;    
-    uint32  gcWinCounts[winMax];
-    for (uint32 ii = 0; ii < winMax; ii++)
-        gcWinCounts[ii] = 0;
-
-    fprintf(stderr, "Processing %s\n", seq.ident());
-
-    for (uint32 ii=0; ii<seq.length(); ii++) {
-
-      switch (bases[ii]) {
-        case 'c':  //  C
-        case 'C':
-          hasC = true;
-          inGC = true;
-          if (beg == -1)  beg = ii;
-          end = ii + 1;
-          break;
-        case 'g':  //  G
-        case 'G':
-          hasG = true;
-          inGC = true;
-          if (beg == -1)  beg = ii;
-          end = ii + 1;
-          break;
-        default :
-          inGC = false;
-          break;
-      }
-
-      if (!inGC) {
-        // is not in GC anymore, but had C and G
-        if (hasC && hasG) {
-          fprintf(fGC, "%s\t%lu\t%lu\n", seq.ident(), beg, end);
-          for (uint32 jj = beg; jj < end; jj++)     // count for each pos
-              gcWinCounts[jj/window]++;
-        }
-
-        // reset
-        beg = -1;
-        hasC = false;
-        hasG = false;
-      }
-    }
-
-    //  end of sequence for loop
-    //  before going to the next chr, write down if there was a GC
-    if  (hasC && hasG) {
-        fprintf(fGC, "%s\t%lu\t%lu\n", seq.ident(), beg, end);
-        for (uint32 jj = beg; jj < end; jj++)     // count for each pos
-            gcWinCounts[jj/window]++;
-    }
-
-    for (uint32 ii = 0; ii < winMax; ii++)
-        fprintf(fGCw, "%s\t%u\t%u\t%u\t%.2f\n", seq.ident(), ii*window, (ii+1) * window, gcWinCounts[ii], ((float) gcWinCounts[ii] * 100) / window);
-  }
-  fclose(fGC);
-  fclose(fGCw);
-}
 
 void
-outGA(dnaSeqFile*   seqFile,
-      char*         outPrefix,
-      bool          verbose,
-      int           window) {
+computeMicroSat(dnaSeqFile *seqFile,
+                char const *outPrefix,
+                char const  f1, char const  f2,
+                char const  r1, char const  r2,
+                uint32      window) {
+  char    fwdBname[FILENAME_MAX+1], revBname[FILENAME_MAX+1];
+  char    fwdWname[FILENAME_MAX+1], revWname[FILENAME_MAX+1];
 
+  //FILE   *fwdBfile = nullptr,  *fwdWfile = nullptr;
+  //FILE   *revBfile = nullptr,  *revWfile = nullptr;
 
-  char    outName[FILENAME_MAX+1];
-  
-  // exact bed
-  sprintf(outName, "%s.GA.bed", outPrefix);
-  FILE *fGA = AS_UTL_openOutputFile(outName);  
-  sprintf(outName, "%s.TC.bed", outPrefix);
-  FILE *fTC = AS_UTL_openOutputFile(outName);
+  sprintf(fwdBname, "%s.%c%c.bed",    outPrefix, f1, f2);
+  sprintf(fwdWname, "%s.%c%c.%u.bed", outPrefix, f1, f2, window);
 
-  // per window count bed
-  sprintf(outName, "%s.GA.%u.bed", outPrefix, window);
-  FILE *fGAw = AS_UTL_openOutputFile(outName);
-  sprintf(outName, "%s.TC.%u.bed", outPrefix, window);
-  FILE *fTCw = AS_UTL_openOutputFile(outName);
+  sprintf(revBname, "%s.%c%c.bed",    outPrefix, r1, r2);
+  sprintf(revWname, "%s.%c%c.%u.bed", outPrefix, r1, r2, window);
 
-  dnaSeq    seq;
-  uint64    seqIdx = 0;
-  
-  while (seqFile->loadSequence(seq) == true) {
+  //  Open files.  If the fwd and rev letters are the same, only
+  //  open one set of files.
 
-    seqIdx  = seqFile->seqIdx();
-    const char* bases = seq.bases();
+  FILE *fwdBfile =              AS_UTL_openOutputFile(fwdBname);
+  FILE *fwdWfile =              AS_UTL_openOutputFile(fwdWname);
 
-    bool    hasG = false, hasA = false, inGA = false;
-    bool    hasT = false, hasC = false, inTC = false;
+  FILE *revBfile = (f1 != f2) ? AS_UTL_openOutputFile(revBname) : nullptr;
+  FILE *revWfile = (r1 != r2) ? AS_UTL_openOutputFile(revWname) : nullptr;
 
-    fprintf(stderr, "Processing %s\n", seq.ident());
-    int     winMax = seq.length()/window;
-    uint32  gaWinCounts[winMax];
-    uint32  tcWinCounts[winMax];
+  for (dnaSeq seq; (seqFile->loadSequence(seq) == true); )
+    computeMicroSat(seq,
+                    f1, f2, fwdBfile, fwdWfile,
+                    r1, r2, revBfile, revWfile,
+                    window);
 
-    int64     begGA = -1, endGA = -1;
-    int64     begTC = -1, endTC = -1;
+  AS_UTL_closeFile(fwdBfile);
+  AS_UTL_closeFile(fwdWfile);
 
-    for (uint32 ii=0; ii<seq.length()/window; ii++) {
-      gaWinCounts[ii] = 0;
-      tcWinCounts[ii] = 0;
-    }
-
-    for (uint32 ii=0; ii<seq.length(); ii++) {
-      switch (bases[ii]) {
-        case 'c':  //  C
-        case 'C':
-          hasC = true;
-          inTC = true;
-          if (begTC == -1)  begTC = ii;
-          endTC = ii + 1;
-          inGA = false;
-          break;
-        case 't':  //  T
-        case 'T':
-          hasT = true;
-          inTC = true;
-          if (begTC == -1)  begTC = ii;
-          endTC = ii + 1;
-          inGA = false;
-          break;
-        case 'a':
-        case 'A':
-          hasA = true;
-          inGA = true;
-          if (begGA == -1) begGA = ii;
-          endGA = ii + 1;
-          inTC = false;
-          break;
-        case 'g':
-        case 'G':
-          hasG = true;
-          inGA = true;
-          if (begGA == -1) begGA = ii;
-          endGA = ii + 1;
-          inTC = false;
-          break;
-        default :
-          inTC = false;
-          inGA = false;
-          break;
-      }
-      if (!inGA) {
-        // is not in GA anymore, but had G and A
-        if (hasG && hasA) {
-          fprintf(fGA, "%s\t%lu\t%lu\n", seq.ident(), begGA, endGA);
-          for (uint32 jj = begGA; jj < endGA; jj++)     // count for each pos
-            gaWinCounts[jj/window]++;
-
-        }
-        // reset
-        begGA = -1;
-        hasG = false;
-        hasA = false;
-      }
-
-      if (!inTC) {
-        // is not in TC anymore, but had T and C
-        if (hasT && hasC) {
-          fprintf(fTC, "%s\t%lu\t%lu\n", seq.ident(), begTC, endTC);
-          for (uint32 jj = begTC; jj < endTC; jj++)
-            tcWinCounts[jj/window]++;
-        }
-        // reset
-        begTC = -1;
-        hasT = false;
-        hasC = false;
-      }
-    } 
-    
-    // end of each sequence for loop
-    // before going to the next chr, write down if there was a GC
-    if (inGA && hasG && hasA) {
-      fprintf(fGA, "%s\t%lu\t%lu\n", seq.ident(), begGA, endGA);
-      for (uint32 jj = begGA; jj < endGA; jj++)
-        gaWinCounts[jj/window]++;
-    }
-
-    if (inTC && hasT && hasC) {
-      fprintf(fTC, "%s\t%lu\t%lu\n", seq.ident(), begTC, endTC);
-      for (uint32 jj = begTC; jj < endTC; jj++)
-        tcWinCounts[jj/window]++;
-    }
-
-    for (uint32 ii = 0; ii < winMax; ii++) {
-      fprintf(fGAw, "%s\t%u\t%u\t%u\t%.2f\n", seq.ident(), ii*window, (ii+1) * window, gaWinCounts[ii], ((float) gaWinCounts[ii] * 100) / window);
-      fprintf(fTCw, "%s\t%u\t%u\t%u\t%.2f\n", seq.ident(), ii*window, (ii+1) * window, tcWinCounts[ii], ((float) tcWinCounts[ii] * 100) / window);
-    }
-    
-  }
-  
-  fclose(fGA);
-  fclose(fTC);
-  fclose(fGAw);
-  fclose(fTCw);
+  AS_UTL_closeFile(revBfile);
+  AS_UTL_closeFile(revWfile);
 }
 
 
 
 
+void
+doMicroSatellite(vector<char *>           &inputs,
+                 microsatelliteParameters &msPar) {
+
+  for (uint32 ff=0; ff<inputs.size(); ff++) {
+    dnaSeqFile  *sf = new dnaSeqFile(inputs[ff]);
+
+    if (msPar.report_legacy == false) {
+      if      (msPar.report_ga == true)
+        computeMicroSat(sf, msPar.outPrefix, 'G', 'A', 'T', 'C', msPar.window);
+      else if (msPar.report_gc == true)
+        computeMicroSat(sf, msPar.outPrefix, 'G', 'C', 'G', 'C', msPar.window);
+      else if (msPar.report_at == true)
+        computeMicroSat(sf, msPar.outPrefix, 'A', 'T', 'A', 'T', msPar.window);
+    }
+
+    else {
+      if      (msPar.report_ga == true)
+        outGA(sf, msPar.outPrefix, msPar.window);
+      else if (msPar.report_gc == true)
+        outGC(sf, msPar.outPrefix, msPar.window);
+      else if (msPar.report_at == true)
+        outAT(sf, msPar.outPrefix, msPar.window);
+    }
+
+    delete sf;
+  }
+}
+
+
+
+
+
+#if 0
 int
 main(int argc, char **argv) {
   char   *seqName     = NULL;
@@ -408,3 +299,4 @@ main(int argc, char **argv) {
 
   exit(0);
 }
+#endif
