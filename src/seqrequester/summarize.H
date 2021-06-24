@@ -25,34 +25,22 @@
 class summarizeParameters {
 public:
   summarizeParameters() {
-    genomeSize   = 0;
-
-    limitTo1x    = false;
-    breakAtN     = false;
-
-    asSimple     = false;
-    asLength     = false;
-
-    asSequences  = true;
-    asBases      = false;
   };
 
   ~summarizeParameters() {
   };
 
-
   void      finalize(void) {
   }
 
+  uint64    genomeSize  = 0;
 
-  uint64    genomeSize;
+  bool      limitTo1x   = false;
+  bool      breakAtN    = false;
 
-  bool      limitTo1x;
-  bool      breakAtN;
+  bool      asSimple    = false;
+  bool      asLength    = false;
 
-  bool      asSimple;
-  bool      asLength;
-
-  bool      asSequences;
-  bool      asBases;
+  bool      asSequences = true;
+  bool      asBases     = false;
 };
