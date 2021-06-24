@@ -20,6 +20,7 @@
 #include "seqrequester.H"
 #include "sequence.H"
 
+#define SHORT_LENGTH 1048576
 
 
 bool
@@ -80,44 +81,59 @@ doSummarize_loadSequence(dnaSeqFile  *sf,
 
 
 void
-doSummarize_lengthHistogramSimple(vector<uint64> lengths) {
-  uint64  bgn = 0;
-  uint64  end = 0;
+doSummarize_lengthHistogramSimple(uint64           *shortLengths,
+                                  vector<uint64>   &longLengths) {
 
-  sort(lengths.begin(), lengths.end(), less<uint64>());
+  //  Short lengths are super easy; they're already a histogram.
 
-  while (bgn < lengths.size()) {
-    end = bgn + 1;
+  for (uint64 ll=0; ll<SHORT_LENGTH; ll++)
+    if (shortLengths[ll] > 0)
+      fprintf(stdout, "%lu\t%lu\n", ll, shortLengths[ll]);
 
-    while ((end < lengths.size()) &&
-           (lengths[bgn] == lengths[end]))
+  //  Long lengths need to be sorted then counted.
+
+  sort(longLengths.begin(), longLengths.end(), less<uint64>());
+
+  for (uint64 bgn=0, end=1; bgn < longLengths.size(); bgn=end, end++) {
+    while ((end < longLengths.size()) &&
+           (longLengths[bgn] == longLengths[end]))
       end++;
 
-    fprintf(stdout, "%lu\t%lu\n", lengths[bgn], end - bgn);
-
-    bgn = end;
+    fprintf(stdout, "%lu\t%lu\n", longLengths[bgn], end - bgn);
   }
 }
 
 
 
 void
-doSummarize_dumpLengths(vector<uint64> lengths) {
+doSummarize_dumpLengths(uint64           *shortLengths,
+                        vector<uint64>   &longLengths) {
 
-  sort(lengths.begin(), lengths.end(), less<uint64>());
+  //  Dump the shorter lengths.
 
-  for (uint64 ii=0; ii<lengths.size(); ii++)
-    fprintf(stdout, "%lu\n", lengths[ii]);
+  for (uint64 ll=0; ll<SHORT_LENGTH; ll++) {
+    if (shortLengths[ll] == 0)
+      continue;
+
+    for (uint64 cc=0; cc<shortLengths[ll]; cc++)
+      fprintf(stdout, "%lu\n", ll);
+  }
+
+  //  Dump the longer lengths.
+
+  sort(longLengths.begin(), longLengths.end(), less<uint64>());
+
+  for (uint64 ii=0; ii<longLengths.size(); ii++)
+    fprintf(stdout, "%lu\n", longLengths[ii]);
 }
 
 
 
 void
-doSummarize_lengthHistogram(vector<uint64> lengths,
-                            uint64         genomeSize,
-                            bool           limitTo1x) {
-
-  sort(lengths.begin(), lengths.end(), greater<uint64>());
+doSummarize_lengthHistogram(uint64          *shortLengths,
+                            vector<uint64>  &longLengths,
+                            uint64           genomeSize,
+                            bool             limitTo1x) {
 
   uint32   nLines   = 0;                      //  Number of lines in the NG table.
 
@@ -131,29 +147,68 @@ doSummarize_lengthHistogram(vector<uint64> lengths,
   uint32   nVal  = nStep;                     //  Index of the threshold we're next printing.
   uint64   nThr  = genomeSize * nVal / 100;   //  Threshold lenth; if sum is bigger, emit and move to the next threshold
 
+  //  These need to be sorted at some point, so might as well do it now.
+  //  Note!  Sorted high to low.
+
+  sort(longLengths.begin(), longLengths.end(), greater<uint64>());
+
+  //  Find the minimum and maximum values.
+
+  uint64   minLength = uint64max;
+  uint64   maxLength = uint64min;
+  uint64   nSeqs     = longLengths.size();    //  Number of sequences we're summarizing.
+
+  for (uint64 ll=0; ll<SHORT_LENGTH; ll++) {
+    if (shortLengths[ll] == 0)
+      continue;
+
+    minLength = std::min(minLength, ll);
+    maxLength = std::max(maxLength, ll);
+    nSeqs    += shortLengths[ll];
+  }
+
+  if (longLengths.size() > 0) {
+    minLength = std::min(minLength, longLengths.back());
+    maxLength = std::max(minLength, longLengths.front());
+  }
+
+  //  Do nothing if there are no sequences.
+
+  if ((minLength == uint64max) &&
+      (maxLength == uint64min))
+    return;
+
   //  Count the number of lines we expect to get in the NG table.
 
-  for (uint32 ii=0; ii<lengths.size(); ii++) {
-    lSum += lengths[ii];
+  auto setStep = [&]()
+                 {
+                   while (lSum >= nThr) {
+                     nLines++;
 
-    while (lSum >= nThr) {
-      nLines++;
+                     if      (nVal <    200)  nVal += nStep;
+                     else if (nVal <   2000)  nVal += nStep * 10;
+                     else if (nVal <  20000)  nVal += nStep * 100;
+                     else if (nVal < 200000)  nVal += nStep * 1000;
+                     else                     nVal += nStep * 10000;
 
-      if      (nVal <    200)  nVal += nStep;
-      else if (nVal <   2000)  nVal += nStep * 10;
-      else if (nVal <  20000)  nVal += nStep * 100;
-      else if (nVal < 200000)  nVal += nStep * 1000;
-      else                     nVal += nStep * 10000;
+                     nThr  = genomeSize * nVal / 100;
+                   }
+                 };
 
-      nThr  = genomeSize * nVal / 100;
+  for (uint64 ll=0; ll<SHORT_LENGTH; ll++) {
+    for (uint64 cc=0; cc<shortLengths[ll]; cc++) {
+      lSum += ll;
+      setStep();
     }
   }
 
-  if (lengths.size() == 0)
-    return;
+  for (uint64 ii=0; ii<longLengths.size(); ii++) {
+    lSum += longLengths[ii];
+    setStep();
+  }
 
-  uint64   minLength = lengths[lengths.size()-1];
-  uint64   maxLength = lengths[0];
+  //
+
 
   if (nLines < nRowsMin)                                //  If there are too few lines in the NG table, make the
     nRows = nRowsMin;                                   //  histogram plot some minimal size, otherwise, make it
@@ -186,8 +241,17 @@ doSummarize_lengthHistogram(vector<uint64> lengths,
   for (uint32 rr=0; rr<nRows+1; rr++)                   //  Clear the histogram.
     nSeqPerLen[rr] = 0;
 
-  for (uint32 ii=0; ii<lengths.size(); ii++) {          //  Count number of sequences per size range.
-    uint32 r = (lengths[ii] - minLength) / bucketSize;
+  for (uint64 ll=0; ll<SHORT_LENGTH; ll++) {                 //  Count the number of sequences per size range.
+    if (shortLengths[ll] > 0) {
+      uint32 r = (ll - minLength) / bucketSize;
+
+      assert(r < nRows+1);
+      nSeqPerLen[r] += shortLengths[ll];
+    }
+  }
+
+  for (uint64 ii=0; ii<longLengths.size(); ii++) {
+    uint32 r = (longLengths[ii] - minLength) / bucketSize;
 
     assert(r < nRows+1);
     nSeqPerLen[r]++;
@@ -210,10 +274,10 @@ doSummarize_lengthHistogram(vector<uint64> lengths,
     uint64  hi = (rr+1) * bucketSize + minLength - 1;
 
     if (lo == hi)
-      sprintf(histPlot[rr], "%9" F_U64P "           %7" F_U32P "|",
+      sprintf(histPlot[rr], "%9lu           %7u|",
               lo, nSeqPerLen[rr]);
     else
-      sprintf(histPlot[rr], "%9" F_U64P "-%-9" F_U64P " %7" F_U32P "|",
+      sprintf(histPlot[rr], "%9lu-%-9lu %7u|",
               lo, hi, nSeqPerLen[rr]);
 
     for (uint32 cc=0; cc<nn; cc++)
@@ -227,36 +291,44 @@ doSummarize_lengthHistogram(vector<uint64> lengths,
   uint32  hp = 0;
 
   fprintf(stdout, "\n");
-  fprintf(stdout, "G=%-12" F_U64P "                     sum of  ||               length     num\n", genomeSize);
+  fprintf(stdout, "G=%-12lu"      "                     sum of  ||               length     num\n", genomeSize);
   fprintf(stdout,   "NG         length     index       lengths  ||                range    seqs\n");
   fprintf(stdout,   "----- ------------ --------- ------------  ||  ------------------- -------\n");
 
   //  Write lines if we're showing all data, or if we're below 1x coverage.
 
-  for (uint32 ii=0; ii<lengths.size(); ii++) {
-    lSum += lengths[ii];
+  auto emitLine = [&](uint64 seqlen, uint64 seqnum)
+                  {
+                    lSum += seqlen;
 
-    while (lSum >= nThr) {
-      if ((limitTo1x == false) ||
-          (nVal <= 100)) {
-        if (hp <= nRows)
-          fprintf(stdout, "%05"    F_U32P " %12" F_U64P " %9" F_U32P " %12" F_U64P "  ||  %s\n",
-                  nVal, lengths[ii], ii, lSum,
-                  histPlot[hp++]);
-        else
-          fprintf(stdout, "%05"    F_U32P " %12" F_U64P " %9" F_U32P " %12" F_U64P "  ||\n",
-                  nVal, lengths[ii], ii, lSum);
-      }
+                    while (lSum >= nThr) {
+                      if ((limitTo1x == false) ||
+                          (nVal <= 100)) {
+                        if (hp <= nRows)
+                          fprintf(stdout, "%05u %12lu %9lu %12lu  ||  %s\n", nVal, seqlen, seqnum, lSum, histPlot[hp++]);
+                        else
+                          fprintf(stdout, "%05u %12lu %9lu %12lu  ||\n",     nVal, seqlen, seqnum, lSum);
+                      }
 
-      if      (nVal <    200)   nVal += nStep;
-      else if (nVal <   2000)   nVal += nStep * 10;
-      else if (nVal <  20000)   nVal += nStep * 100;
-      else if (nVal < 200000)   nVal += nStep * 1000;
-      else                      nVal += nStep * 10000;
+                      if      (nVal <    200)   nVal += nStep;
+                      else if (nVal <   2000)   nVal += nStep * 10;
+                      else if (nVal <  20000)   nVal += nStep * 100;
+                      else if (nVal < 200000)   nVal += nStep * 1000;
+                      else                      nVal += nStep * 10000;
 
-      nThr  = genomeSize * nVal / 100;
-    }
-  }
+                      nThr  = genomeSize * nVal / 100;
+                    }
+                  };
+
+  uint64  ns = 0;
+
+  for (uint64 ii=0; ii<longLengths.size(); ii++, ns++)
+    emitLine(longLengths[ii], ns);
+
+  for (uint64 ll=SHORT_LENGTH; ll-- > 0; )
+    for (uint64 cc=0; cc<shortLengths[ll]; cc++, ns++)
+      emitLine(ll, ns);
+
 
   //  If we're displaying exactly 1x, write empty lines to get to there.
 
@@ -277,11 +349,11 @@ doSummarize_lengthHistogram(vector<uint64> lengths,
   //  Now the final summary line.
 
   if (genomeSize == 0)
-    fprintf(stdout, "%07.3fx           %9" F_U64P " %12" F_U64P "  ||  %s\n", 0.0, lengths.size(), lSum, histPlot[hp++]);   //  Occurs if only empty sequences in the input!
+    fprintf(stdout, "%07.3fx           %9lu %12lu  ||  %s\n", 0.0, nSeqs, lSum, histPlot[hp++]);   //  Occurs if only empty sequences in the input!
   else if (hp <= nRows)
-    fprintf(stdout, "%07.3fx           %9" F_U64P " %12" F_U64P "  ||  %s\n", (double)lSum / genomeSize, lengths.size(), lSum, histPlot[hp++]);
+    fprintf(stdout, "%07.3fx           %9lu %12lu  ||  %s\n", (double)lSum / genomeSize, nSeqs, lSum, histPlot[hp++]);
   else
-    fprintf(stdout, "%07.3fx           %9" F_U64P " %12" F_U64P "  ||\n",     (double)lSum / genomeSize, lengths.size(), lSum);
+    fprintf(stdout, "%07.3fx           %9lu %12lu  ||\n",     (double)lSum / genomeSize, nSeqs, lSum);
 
   while (hp <= nRows)
     fprintf(stdout, "                                           ||  %s\n", histPlot[hp++]);
@@ -304,7 +376,8 @@ void
 doSummarize(vector<char *>       &inputs,
             summarizeParameters  &sumPar) {
 
-  vector<uint64>  lengths;
+  uint64         *shortLengths = new uint64 [SHORT_LENGTH];
+  vector<uint64>  longLengths;
 
   uint64          nSeqs  = 0;
   uint64          nBases = 0;
@@ -367,7 +440,11 @@ doSummarize(vector<char *>       &inputs,
         nSeqs  += 1;
         nBases += seqLen;
 
-        lengths.push_back(seqLen);
+        if (seqLen < SHORT_LENGTH)
+          shortLengths[seqLen]++;
+        else
+          longLengths.push_back(seqLen);
+
         continue;
       }
 
@@ -396,7 +473,10 @@ doSummarize(vector<char *>       &inputs,
           nSeqs  += 1;
           nBases += pos - bgn;
 
-          lengths.push_back(pos - bgn);
+          if (pos - bgn < SHORT_LENGTH)
+            shortLengths[pos - bgn]++;
+          else
+            longLengths.push_back(pos - bgn);
         }
       }
     }
@@ -416,23 +496,23 @@ doSummarize(vector<char *>       &inputs,
   //  If only a simple histogram of lengths is requested, dump and done.
 
   if (sumPar.asSimple == true) {
-    doSummarize_lengthHistogramSimple(lengths);
+    doSummarize_lengthHistogramSimple(shortLengths, longLengths);
   }
 
   //  If only the read lengths are requested, dump and done.
 
   else if (sumPar.asLength == true) {
-    doSummarize_dumpLengths(lengths);
+    doSummarize_dumpLengths(shortLengths, longLengths);
   }
 
   //  Otherwise, generate a fancy histogram plot.
   //  And finish with the mono-, di- and tri-nucleotide frequencies.
 
-#define FMT "%12" F_U64P " %6.4f"
+#define FMT "%12lu %6.4f"
 #define GC "%05.02f%%"
 
   else {
-    doSummarize_lengthHistogram(lengths, sumPar.genomeSize, sumPar.limitTo1x);
+    doSummarize_lengthHistogram(shortLengths, longLengths, sumPar.genomeSize, sumPar.limitTo1x);
 
     if (nmn == 0)  nmn = 1;   //  Avoid divide by zero.
     if (ndn == 0)  ndn = 1;
