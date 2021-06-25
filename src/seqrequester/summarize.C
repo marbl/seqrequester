@@ -20,8 +20,6 @@
 #include "seqrequester.H"
 #include "sequence.H"
 
-#define SHORT_LENGTH 1048576
-
 
 bool
 doSummarize_loadSequence(dnaSeqFile  *sf,
@@ -82,11 +80,12 @@ doSummarize_loadSequence(dnaSeqFile  *sf,
 
 void
 doSummarize_lengthHistogramSimple(uint64           *shortLengths,
+                                  uint32            shortLengthsLen,
                                   vector<uint64>   &longLengths) {
 
   //  Short lengths are super easy; they're already a histogram.
 
-  for (uint64 ll=0; ll<SHORT_LENGTH; ll++)
+  for (uint64 ll=0; ll<shortLengthsLen; ll++)
     if (shortLengths[ll] > 0)
       fprintf(stdout, "%lu\t%lu\n", ll, shortLengths[ll]);
 
@@ -107,11 +106,12 @@ doSummarize_lengthHistogramSimple(uint64           *shortLengths,
 
 void
 doSummarize_dumpLengths(uint64           *shortLengths,
+                        uint32            shortLengthsLen,
                         vector<uint64>   &longLengths) {
 
   //  Dump the shorter lengths.
 
-  for (uint64 ll=0; ll<SHORT_LENGTH; ll++) {
+  for (uint64 ll=0; ll<shortLengthsLen; ll++) {
     if (shortLengths[ll] == 0)
       continue;
 
@@ -131,6 +131,7 @@ doSummarize_dumpLengths(uint64           *shortLengths,
 
 void
 doSummarize_lengthHistogram(uint64          *shortLengths,
+                            uint32           shortLengthsLen,
                             vector<uint64>  &longLengths,
                             uint64           genomeSize,
                             bool             limitTo1x) {
@@ -158,7 +159,7 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
   uint64   maxLength = uint64min;
   uint64   nSeqs     = longLengths.size();    //  Number of sequences we're summarizing.
 
-  for (uint64 ll=0; ll<SHORT_LENGTH; ll++) {
+  for (uint64 ll=0; ll<shortLengthsLen; ll++) {
     if (shortLengths[ll] == 0)
       continue;
 
@@ -195,7 +196,7 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
                    }
                  };
 
-  for (uint64 ll=0; ll<SHORT_LENGTH; ll++) {
+  for (uint64 ll=0; ll<shortLengthsLen; ll++) {
     for (uint64 cc=0; cc<shortLengths[ll]; cc++) {
       lSum += ll;
       setStep();
@@ -241,7 +242,7 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
   for (uint32 rr=0; rr<nRows+1; rr++)                   //  Clear the histogram.
     nSeqPerLen[rr] = 0;
 
-  for (uint64 ll=0; ll<SHORT_LENGTH; ll++) {                 //  Count the number of sequences per size range.
+  for (uint64 ll=0; ll<shortLengthsLen; ll++) {                 //  Count the number of sequences per size range.
     if (shortLengths[ll] > 0) {
       uint32 r = (ll - minLength) / bucketSize;
 
@@ -325,7 +326,7 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
   for (uint64 ii=0; ii<longLengths.size(); ii++, ns++)
     emitLine(longLengths[ii], ns);
 
-  for (uint64 ll=SHORT_LENGTH; ll-- > 0; )
+  for (uint64 ll=shortLengthsLen; ll-- > 0; )
     for (uint64 cc=0; cc<shortLengths[ll]; cc++, ns++)
       emitLine(ll, ns);
 
@@ -375,8 +376,8 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
 void
 doSummarize(vector<char *>       &inputs,
             summarizeParameters  &sumPar) {
-
-  uint64         *shortLengths = new uint64 [SHORT_LENGTH];
+  uint32          shortLengthsLen = 1048576;
+  uint64         *shortLengths    = new uint64 [shortLengthsLen];
   vector<uint64>  longLengths;
 
   uint64          nSeqs  = 0;
@@ -440,7 +441,7 @@ doSummarize(vector<char *>       &inputs,
         nSeqs  += 1;
         nBases += seqLen;
 
-        if (seqLen < SHORT_LENGTH)
+        if (seqLen < shortLengthsLen)
           shortLengths[seqLen]++;
         else
           longLengths.push_back(seqLen);
@@ -473,7 +474,7 @@ doSummarize(vector<char *>       &inputs,
           nSeqs  += 1;
           nBases += pos - bgn;
 
-          if (pos - bgn < SHORT_LENGTH)
+          if (pos - bgn < shortLengthsLen)
             shortLengths[pos - bgn]++;
           else
             longLengths.push_back(pos - bgn);
@@ -496,13 +497,13 @@ doSummarize(vector<char *>       &inputs,
   //  If only a simple histogram of lengths is requested, dump and done.
 
   if (sumPar.asSimple == true) {
-    doSummarize_lengthHistogramSimple(shortLengths, longLengths);
+    doSummarize_lengthHistogramSimple(shortLengths, shortLengthsLen, longLengths);
   }
 
   //  If only the read lengths are requested, dump and done.
 
   else if (sumPar.asLength == true) {
-    doSummarize_dumpLengths(shortLengths, longLengths);
+    doSummarize_dumpLengths(shortLengths, shortLengthsLen, longLengths);
   }
 
   //  Otherwise, generate a fancy histogram plot.
@@ -512,7 +513,7 @@ doSummarize(vector<char *>       &inputs,
 #define GC "%05.02f%%"
 
   else {
-    doSummarize_lengthHistogram(shortLengths, longLengths, sumPar.genomeSize, sumPar.limitTo1x);
+    doSummarize_lengthHistogram(shortLengths, shortLengthsLen, longLengths, sumPar.genomeSize, sumPar.limitTo1x);
 
     if (nmn == 0)  nmn = 1;   //  Avoid divide by zero.
     if (ndn == 0)  ndn = 1;
