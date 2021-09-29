@@ -19,6 +19,8 @@ SOURCES      := utility/src/utility/edlib.C \
                 \
                 utility/src/utility/types.C \
                 \
+                utility/src/utility/sampledDistribution.C \
+                \
                 utility/src/utility/kmers-exact.C \
                 utility/src/utility/kmers-files.C \
                 utility/src/utility/kmers-histogram.C \

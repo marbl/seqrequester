@@ -26,19 +26,6 @@
 class simulateParameters {
 public:
   simulateParameters() {
-    genomeSize      = 0;
-    circular        = false;
-
-    desiredCoverage = 0.0;
-    desiredNumReads = 0;
-    desiredNumBases = 0;
-
-    desiredMinLength = 0;
-    desiredMaxLength = UINT32_MAX;
-
-    memset(genomeName,  0, FILENAME_MAX+1);
-    memset(distribName, 0, FILENAME_MAX+1);
-    memset(outputName,  0, FILENAME_MAX+1);
   }
 
   ~simulateParameters() {
@@ -52,19 +39,24 @@ public:
   void      finalize(void);
 
 
-  uint64  genomeSize;
-  bool    circular;
+  uint64  genomeSize         = 0;
+  bool    circular           = false;
+  bool    truncate           = false;
 
-  double  desiredCoverage;
-  uint64  desiredNumReads;
-  uint64  desiredNumBases;
+  bool    test               = false;
 
-  uint32  desiredMinLength;
-  uint32  desiredMaxLength;
+  double  desiredCoverage    = 0.0;
+  uint64  desiredNumReads    = 0;
+  uint64  desiredNumBases    = 0;
+
+  uint32  desiredMinLength   = uint32max;
+  uint32  desiredMaxLength   = 0;
+
+  double  rcProb             = 0.5;
 
   sampledDistribution  dist;
 
-  char    genomeName[FILENAME_MAX+1];
-  char    distribName[FILENAME_MAX+1];
-  char    outputName[FILENAME_MAX+1];
+  char    genomeName[FILENAME_MAX+1]  = { 0 };
+  char    distribName[FILENAME_MAX+1] = { 0 };
+  char    outputName[FILENAME_MAX+1]  = { 0 };
 };

@@ -18,6 +18,8 @@
  */
 
 #include "seqrequester.H"
+
+#include "arrays.H"
 #include "files.H"
 #include "mt19937ar.H"
 

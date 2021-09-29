@@ -252,6 +252,10 @@ main(int argc, char **argv) {
       simPar.circular = true;
     }
 
+    else if ((mode == modeSimulate) && (strcmp(argv[arg], "-truncate") == 0)) {
+      simPar.truncate = true;
+    }
+
     else if ((mode == modeSimulate) && (strcmp(argv[arg], "-genome") == 0)) {
       strncpy(simPar.genomeName, argv[++arg], FILENAME_MAX);
     }
@@ -264,12 +268,20 @@ main(int argc, char **argv) {
       decodeRange(argv[++arg], simPar.desiredMinLength, simPar.desiredMaxLength);
     }
 
+    else if ((mode == modeSimulate) && (strcmp(argv[arg], "-reverse") == 0)) {
+      simPar.rcProb = strtodouble(argv[++arg]);
+    }
+
     //else if ((mode == modeSimulate) && (strcmp(argv[arg], "-name") == 0)) {
     //  strncpy(simPar.sequenceName, argv[++arg], FILENAME_MAX);
     //}
 
     else if ((mode == modeSimulate) && (strcmp(argv[arg], "-output") == 0)) {
       strncpy(simPar.outputName, argv[++arg], FILENAME_MAX);
+    }
+
+    else if ((mode == modeSimulate) && (strcmp(argv[arg], "-test") == 0)) {
+      simPar.test = true;
     }
 
 
@@ -572,6 +584,7 @@ main(int argc, char **argv) {
       fprintf(stderr, "OPTIONS for simulate mode:\n");
       fprintf(stderr, "  -genome G           sample reads from these sequences\n");
       fprintf(stderr, "  -circular           treat the sequences in G as circular\n");
+      fprintf(stderr, "  -truncate           sample uniformly, at expense of read length\n");
       fprintf(stderr, "\n");
       fprintf(stderr, "  -genomesize g       genome size to use for deciding coverage below\n");
       fprintf(stderr, "  -coverage c         generate approximately c coverage of output\n");
@@ -587,8 +600,13 @@ main(int argc, char **argv) {
       fprintf(stderr, "                        pacbio\n");
       fprintf(stderr, "                        pacbio-hifi\n");
       fprintf(stderr, "\n");
-      fprintf(stderr, "  -length min[-max]   (not implemented)\n");
+      fprintf(stderr, "  -length min[-max]   generate read length uniformly from range min-max\n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "  -reverse p          output a reverse-complement read with probability p\n");
+      fprintf(stderr, "\n");
       fprintf(stderr, "  -output x.fasta     (not implemented)\n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "  -test               generate a read at every possible start position\n");
       fprintf(stderr, "\n");
     }
 
