@@ -137,7 +137,7 @@ doSimulate_findSequenceTruncated(vector<dnaSeq *> &seqs,
                                  uint64           &bgn,
                                  uint64           &end,
                                  char             *r,
-                                 uint64            rLen) {
+                                 uint64           &rLen) {
 
   for (uint64 ss=0; ss < seqs.size(); ss++) {
     uint64  sl = (rLen-1) + seqs[ss]->length();
