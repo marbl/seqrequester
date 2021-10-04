@@ -21,6 +21,7 @@
 #error  Include simulate.H only from seqrequester.H
 #endif
 
+#include "mt19937ar.H"
 #include "sampledDistribution.H"
 
 class simulateParameters {
@@ -54,6 +55,7 @@ public:
 
   double  rcProb             = 0.5;
 
+  mtRandom             mt;
   sampledDistribution  dist;
 
   char    genomeName[FILENAME_MAX+1]  = { 0 };

@@ -21,11 +21,44 @@
 
 #include "arrays.H"
 #include "sequence.H"
-#include "mt19937ar.H"
 
 #include <vector>
 
 using namespace std;
+
+
+class simRead {
+public:
+  simRead() {
+  };
+
+  ~simRead() {
+    delete [] seq;
+  };
+
+  void
+  setSize(uint64 l) {
+    resizeArray(seq, 0, seqMax, l+1);
+  };
+
+  bool
+  reverseComplement(bool flip) {
+    if (flip)
+      reverseComplementSequence(seq, seqLen);
+
+    assert(seq[0] != 0);
+
+    return(flip);
+  };
+
+  uint64   srcID  = 0;
+  uint64   srcBgn = 0;
+  uint64   srcEnd = 0;
+
+  uint64   seqLen = 0;
+  uint64   seqMax = 1024;
+  char    *seq    = new char [seqMax];
+};
 
 
 
@@ -59,7 +92,7 @@ simulateParameters::finalize() {
 void
 doSimulate_loadSequences(simulateParameters  &simPar,
                          vector<dnaSeq *>    &seqs,
-                         uint64              &seqLen) {
+                         uint64              &seqsLen) {
   fprintf(stderr, "Loading sequences from '%s'\n", simPar.genomeName);
 
   dnaSeq           *seq    = new dnaSeq;
@@ -68,7 +101,7 @@ doSimulate_loadSequences(simulateParameters  &simPar,
   for (; sf->loadSequence(*seq); seq = new dnaSeq) {
     seqs.push_back(seq);
 
-    seqLen += seq->length();
+    seqsLen += seq->length();
   }
 
   delete seq;
@@ -79,132 +112,58 @@ doSimulate_loadSequences(simulateParameters  &simPar,
 
 
 
-uint64
+void
 doSimulate_findSequenceCircular(vector<dnaSeq *> &seqs,
-                                uint64            position,
-                                uint64           &bgn,
-                                uint64           &end,
-                                char             *r,
-                                uint64            rLen) {
+                                uint64            desiredStart,
+                                uint64            desiredLength,
+                                simRead          *read) {
+
+  read->setSize(desiredLength);
 
   for (uint64 ss=0; ss < seqs.size(); ss++) {
     uint64  sl = seqs[ss]->length();
 
-    if (position < sl) {
-      bgn = position;
-      end = position + rLen;
-
-      if (end <= sl) {
-        memcpy(r, seqs[ss]->bases() + bgn, sizeof(char) * (end-bgn));
-
-        r[rLen] = 0;
-        return(ss);
-      }
-      else {
-        end -= sl;
-
-        uint64  l1 = seqs[ss]->length() - bgn;
-        uint64  l2 =                      end;
-
-        memcpy(r, seqs[ss]->bases() + bgn, sizeof(char) * l1);
-
-        while (l2 > sl) {
-          memcpy(r+l1, seqs[ss]->bases(), sizeof(char) * sl);
-          l1 += sl;
-          l2 -= sl;
-        }
-
-        memcpy(r+l1, seqs[ss]->bases(), sizeof(char) * l2);
-
-        r[rLen] = 0;
-        return(ss);
-      }
+    if (desiredStart >= sl) {   //  Desired read is
+      desiredStart -= sl;       //  after this
+      continue;                 //  sequence ends.
     }
 
-    position -= sl;
-  }
+    read->srcID  = ss;
+    read->srcBgn = desiredStart;
+    read->srcEnd = desiredStart + desiredLength;
+    read->seqLen = desiredLength;
 
-  fprintf(stderr, "Not possible to make reads; desired read length too long?\n");
-  exit(1);
-  assert(0);
-}
+    //  If the read is entirely within the sequence, copy consecutive bases.
 
+    if (read->srcEnd <= sl) {
+      memcpy(read->seq, seqs[ss]->bases() + read->srcBgn, sizeof(char) * read->seqLen);
 
-
-uint64
-doSimulate_findSequenceTruncated(vector<dnaSeq *> &seqs,
-                                 uint64            position,
-                                 uint64           &bgn,
-                                 uint64           &end,
-                                 char             *r,
-                                 uint64           &rLen) {
-
-  for (uint64 ss=0; ss < seqs.size(); ss++) {
-    uint64  sl = (rLen-1) + seqs[ss]->length();
-
-    if (position < sl) {
-
-      //  Truncated at the start.
-      if        (position <      rLen) {
-        bgn  = 0;
-        end  = position+1;
-        memcpy(r, seqs[ss]->bases(), sizeof(char) * (end-bgn));
-      }
-
-      //  Full read in the middle of the sequence.
-      else if (position < sl - rLen) {
-        bgn  = position - (rLen-1);
-        end  = bgn + rLen;
-        memcpy(r, seqs[ss]->bases() + position - (rLen-1), sizeof(char) * (end-bgn));
-      }
-
-      //  Truncated at the end.
-      else {
-        bgn  = position - (rLen-1);
-        end  = seqs[ss]->length();
-        memcpy(r, seqs[ss]->bases() + position - (rLen-1), sizeof(char) * (end-bgn));
-      }
-
-      rLen = end - bgn;
-      r[rLen] = 0;
-      return(ss);
+      read->seq[read->seqLen] = 0;
+      return;
     }
 
-    position -= sl;
-  }
+    //  Otherwise, copy bases from the end, then whole copies, then bases
+    //  from the start.
 
-  fprintf(stderr, "Not possible to make reads; desired read length too long?\n");
-  exit(1);
-  assert(0);
-}
+    else {
+      uint64  l1 = seqs[ss]->length() - read->srcBgn;
+      uint64  l2 = desiredLength - l1;
 
+      memcpy(read->seq, seqs[ss]->bases() + read->srcBgn, sizeof(char) * l1);
 
+      while (l2 > sl) {
+        memcpy(read->seq+l1, seqs[ss]->bases(), sizeof(char) * sl);
+        l1 += sl;
+        l2 -= sl;
+      }
 
-uint64
-doSimulate_findSequence(vector<dnaSeq *> &seqs,
-                        uint64            position,
-                        uint64           &bgn,
-                        uint64           &end,
-                        char             *r,
-                        uint64            rLen) {
+      memcpy(read->seq+l1, seqs[ss]->bases(), sizeof(char) * l2);
 
-  for (uint64 ss=0; ss < seqs.size(); ss++) {
-    uint64  sl = seqs[ss]->length() - (rLen-1);
+      read->srcEnd = l2;
 
-    if (seqs[ss]->length() < rLen-1)
-      continue;
-
-    if (position < sl) {
-      bgn = position;
-      end = bgn + rLen;
-
-      memcpy(r, seqs[ss]->bases() + bgn, sizeof(char) * (end-bgn));
-
-      r[end-bgn] = 0;
-      return(ss);
+      read->seq[read->seqLen] = 0;
+      return;
     }
-
-    position -= sl;
   }
 
   fprintf(stderr, "Not possible to make reads; desired read length too long?\n");
@@ -215,34 +174,171 @@ doSimulate_findSequence(vector<dnaSeq *> &seqs,
 
 
 void
+doSimulate_findSequenceTruncated(vector<dnaSeq *> &seqs,
+                                 uint64            desiredStart,
+                                 uint64            desiredLength,
+                                 simRead          *read) {
+
+  read->setSize(desiredLength);
+
+  for (uint64 ss=0; ss < seqs.size(); ss++) {
+    uint64  sl = (desiredLength-1) + seqs[ss]->length();
+
+    if (desiredStart >= sl) {   //  Desired read is
+      desiredStart -= sl;       //  after this
+      continue;                 //  sequence ends.
+    }
+
+    read->srcID  = ss;
+    read->srcBgn = desiredStart;
+    read->srcEnd = desiredStart + desiredLength;
+    read->seqLen = desiredLength;
+
+    //  We've conceptually extended the sequence by desiredLength-1 bases at
+    //  the start.  If the read starts in those bases, the read is
+    //  'truncated' to the start of the read.  Likewise for the end of the
+    //  sequence.
+
+    //  Truncated at both ends.
+    if ((desiredStart                 < desiredLength) &&
+        (desiredStart + desiredLength > sl)) {
+      read->srcBgn = 0;
+      read->srcEnd = seqs[ss]->length();
+    }
+
+    //  Truncated at the start.
+    else if (desiredStart < desiredLength) {
+      read->srcBgn = 0;
+      read->srcEnd = desiredStart - (desiredLength-1) + desiredLength;
+    }
+
+    //  Truncated at the end.
+    else if (desiredStart + desiredLength > sl) {
+      read->srcBgn = desiredStart - (desiredLength-1);
+      read->srcEnd = seqs[ss]->length();
+    }
+
+    //  Full read in the middle of the sequence.
+    else {
+      read->srcBgn = desiredStart - (desiredLength-1);
+      read->srcEnd = desiredStart - (desiredLength-1) + desiredLength;
+    }
+
+    read->seqLen = read->srcEnd - read->srcBgn;   //  Updated for truncation!
+
+    memcpy(read->seq, seqs[ss]->bases() + read->srcBgn, sizeof(char) * read->seqLen);
+
+    read->seq[read->seqLen] = 0;
+
+    return;
+  }
+
+
+  fprintf(stderr, "Not possible to make reads; desired read length too long?\n");
+  exit(1);
+  assert(0);
+}
+
+
+
+void
+doSimulate_findSequenceContained(vector<dnaSeq *> &seqs,
+                                 uint64            desiredStart,
+                                 uint64            desiredLength,
+                                 simRead          *read) {
+
+  read->setSize(desiredLength);
+
+  for (uint64 ss=0; ss < seqs.size(); ss++) {
+    uint64  sl = seqs[ss]->length() - (desiredLength-1);
+
+    if (seqs[ss]->length() < desiredLength-1)   //  Completely ignore short
+      continue;                                 //  sequences.
+
+    if (desiredStart >= sl) {   //  Desired read is
+      desiredStart -= sl;       //  after this
+      continue;                 //  sequence ends.
+    }
+
+    read->srcID  = ss;
+    read->srcBgn = desiredStart;
+    read->srcEnd = desiredStart + desiredLength;
+    read->seqLen = read->srcEnd - read->srcBgn;
+
+    memcpy(read->seq, seqs[ss]->bases() + read->srcBgn, sizeof(char) * read->seqLen);
+
+    read->seq[read->seqLen] = 0;
+
+    return;
+  }
+
+  fprintf(stderr, "Not possible to make reads; desired read length too long?\n");
+  exit(1);
+  assert(0);
+}
+
+
+
+void
+doSimulate_findSequence(simulateParameters &simPar,
+                        vector<dnaSeq *>   &seqs,
+                        uint64              desiredStart,
+                        uint64              desiredLength,
+                        simRead            *read,
+                        uint64              readID) {
+
+  //  Search for the sequence that has bases that start at 'seqsPos'.
+
+  if        (simPar.circular == true) {
+    doSimulate_findSequenceCircular(seqs, desiredStart, desiredLength, read);
+  }
+
+  else if (simPar.truncate == true) {
+    doSimulate_findSequenceTruncated(seqs, desiredStart, desiredLength, read);
+  }
+
+  else {
+    doSimulate_findSequenceContained(seqs, desiredStart, desiredLength, read);
+  }
+
+  //  Randomly reverse-complement.
+
+  bool flipped = read->reverseComplement(simPar.mt.mtRandomRealOpen() < simPar.rcProb);
+
+  //  And output.
+
+  fprintf(stdout, ">read=%lu,%s,position=%lu-%lu,length=%lu,%s\n",
+          readID,
+          (flipped == false) ? "forward" : "reverse",
+          read->srcBgn, read->srcEnd, read->seqLen,
+          seqs[read->srcID]->ident());
+  fprintf(stdout, "%s\n", read->seq);
+}
+
+
+
+void
 doSimulate_extract(simulateParameters &simPar,
                    vector<dnaSeq *>   &seqs,
-                   uint64              seqLen,        //  Total length of all sequences
-                   mtRandom           &mt,
+                   uint64              seqsLen,        //  Total length of all sequences
                    uint64              nReadsMax,
                    uint64              nBasesMax) {
+  uint64    nReads = 0;
+  uint64    nBases = 0;
 
-  uint64  nReads = 0;
-  uint64  nBases = 0;
-
-  uint64  rLen = 0;
-  uint64  rMax = 1048576;
-  char   *r    = new char [rMax];
-
-  uint64  bgn = 0;
-  uint64  end = 0;
+  simRead  *read   = new simRead;
 
   while ((nReads < nReadsMax) &&
          (nBases < nBasesMax)) {
 
     //  Based on the input length distribution, generate a random read length.
 
-    if (simPar.dist.empty() == false)
-      rLen = simPar.dist.getValue(mt.mtRandomRealOpen());
-    else
-      rLen = mt.mtRandomRealOpen() * (simPar.desiredMaxLength - simPar.desiredMinLength) + simPar.desiredMinLength;
+    uint64  desiredLength;
 
-    resizeArray(r, 0, rMax, rLen+1);
+    if (simPar.dist.empty() == true)
+      desiredLength = simPar.desiredMinLength + (simPar.desiredMaxLength - simPar.desiredMinLength) * simPar.mt.mtRandomRealOpen();
+    else
+      desiredLength = simPar.dist.getValue(simPar.mt.mtRandomRealOpen());
 
     //  Compute a position in the sequences.
     //
@@ -256,62 +352,34 @@ doSimulate_extract(simulateParameters &simPar,
     //  cannot get any read out of this sequence.  Thus, we need to
     //  explicitly sum the lengths of sequences for each read length.
 
-    uint64  sl = 0;
+    uint64  effectiveLength = 0;
+    uint64  desiredStart    = 0;
 
     if        (simPar.circular == true) {
-      sl = seqLen;
+      effectiveLength = seqsLen;
     }
 
     else if (simPar.truncate == true) {
-      sl = seqLen + (rLen-1) * seqs.size();
+      effectiveLength = seqsLen + (desiredLength-1) * seqs.size();
     }
 
     else {
       for (uint64 ss=0; ss < seqs.size(); ss++)
-        if (rLen <= seqs[ss]->length())
-          sl += seqs[ss]->length() - (rLen-1);
+        if (desiredLength <= seqs[ss]->length())
+          effectiveLength += seqs[ss]->length() - (desiredLength-1);
     }
 
-    uint64  seqID    = 0;
-    uint64  position = (uint64)floor(mt.mtRandomRealOpen() * sl);
+    desiredStart = (uint64)floor(simPar.mt.mtRandomRealOpen() * effectiveLength);
 
-    //  Search for the sequence that has bases that start at 'position'.
-
-    if        (simPar.circular == true) {
-      seqID = doSimulate_findSequenceCircular(seqs, position, bgn, end, r, rLen);
-    }
-
-    else if (simPar.truncate == true) {
-      seqID = doSimulate_findSequenceTruncated(seqs, position, bgn, end, r, rLen);
-    }
-
-    else {
-      seqID = doSimulate_findSequence(seqs, position, bgn, end, r, rLen);
-    }
-
-    //  Terminate the read and randomly flip it.
-
-    bool flip = (mt.mtRandomRealOpen() < simPar.rcProb) ? true : false;
-
-    if (flip)
-      reverseComplementSequence(r, rLen);
-
-    //  And output.
-
-    fprintf(stdout, ">read=%lu,%s,position=%lu-%lu,length=%lu,%s\n",
-            nReads+1,
-            (flip == false) ? "forward" : "reverse",
-            bgn, end, rLen,
-            seqs[seqID]->ident());
-    fprintf(stdout, "%s\n", r);
+    doSimulate_findSequence(simPar, seqs, desiredStart, desiredLength, read, nReads+1);
 
     //  Account for the read we just emitted.
 
     nReads += 1;
-    nBases += rLen;
+    nBases += read->seqLen;
   }
 
-  delete [] r;
+  delete read;
 }
 
 
@@ -319,70 +387,43 @@ doSimulate_extract(simulateParameters &simPar,
 void
 doSimulate_test(simulateParameters &simPar,
                 vector<dnaSeq *>   &seqs,
-                uint64              seqLen,        //  Total length of all sequences
-                mtRandom           &mt,
+                uint64              seqsLen,        //  Total length of all sequences
                 uint64              nReadsMax,
                 uint64              nBasesMax) {
-
   uint64  nReads = 0;
   uint64  nBases = 0;
 
-  uint64  rLen = 50;
-  uint64  rMax = 1048576;
-  char   *r    = new char [rMax];
-
-  uint64  bgn = 0;
-  uint64  end = 0;
+  simRead  *read   = new simRead;
 
   //  Compute the length of the sequence we're sampling reads from.
 
-  uint64  sl = 0;
+  uint64  desiredLength = simPar.desiredMinLength;
+  uint64  effectiveLength  = 0;
 
   if        (simPar.circular == true) {
-    sl = seqLen;
+    effectiveLength = seqsLen;
   }
 
   else if (simPar.truncate == true) {
-    sl = seqLen + (rLen-1) * seqs.size();
+    effectiveLength = seqsLen + (desiredLength-1) * seqs.size();
   }
 
   else {
     for (uint64 ss=0; ss < seqs.size(); ss++)
-      if (rLen <= seqs[ss]->length())
-        sl += seqs[ss]->length() - (rLen-1);
+      if (desiredLength <= seqs[ss]->length())
+        effectiveLength += seqs[ss]->length() - (desiredLength-1);
   }
 
   //  Iterate over every start position, extract the sequence, and output.
 
-  for (uint64 position=0; position < sl; position++) {
-    uint64  seqID    = 0;
-
-    if        (simPar.circular == true) {
-      seqID = doSimulate_findSequenceCircular(seqs, position, bgn, end, r, rLen);
-    }
-
-    else if (simPar.truncate == true) {
-      seqID = doSimulate_findSequenceTruncated(seqs, position, bgn, end, r, rLen);
-    }
-
-    else {
-      seqID = doSimulate_findSequence(seqs, position, bgn, end, r, rLen);
-    }
-
-    bool flip = false;
-
-    fprintf(stdout, ">read=%lu,%s,position=%lu-%lu,length=%lu,%s\n",
-            nReads+1,
-            (flip == false) ? "forward" : "reverse",
-            bgn, end, rLen,
-            seqs[seqID]->ident());
-    fprintf(stdout, "%s\n", r);
+  for (uint64 desiredStart=0; desiredStart < effectiveLength; desiredStart++) {
+    doSimulate_findSequence(simPar, seqs, desiredStart, desiredLength, read, nReads+1);
 
     nReads += 1;
-    nBases += rLen;
+    nBases += read->seqLen;
   }
 
-  delete [] r;
+  delete read;
 }
 
 
@@ -390,7 +431,6 @@ doSimulate_test(simulateParameters &simPar,
 void
 doSimulate(vector<char *>     &inputs,
            simulateParameters &simPar) {
-  mtRandom   mt;
 
   //  Decide how many reads or bases to make.
 
@@ -423,19 +463,21 @@ doSimulate(vector<char *>     &inputs,
   //  Load the genome sequences.
 
   vector<dnaSeq *>  seqs;
-  uint64            seqLen = 0;
+  uint64            seqsLen = 0;
 
-  doSimulate_loadSequences(simPar, seqs, seqLen);
+  doSimulate_loadSequences(simPar, seqs, seqsLen);
 
   //  Make reads!
 
   if (simPar.test == false)
-    doSimulate_extract(simPar, seqs, seqLen, mt, nReadsMax, nBasesMax);
+    doSimulate_extract(simPar, seqs, seqsLen, nReadsMax, nBasesMax);
   else
-    doSimulate_test(simPar, seqs, seqLen, mt, nReadsMax, nBasesMax);
+    doSimulate_test(simPar, seqs, seqsLen, nReadsMax, nBasesMax);
 
   //  Clean up the reference sequences we loaded.
 
   for (uint64 ii=0; ii<seqs.size(); ii++)
     delete seqs[ii];
 }
+
+
