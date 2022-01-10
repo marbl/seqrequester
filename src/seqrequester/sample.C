@@ -188,8 +188,8 @@ doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
 
   //  Open output files. If paired, replace #'s in the output names with 1 or 2.
 
-  FILE *outFile1 = NULL;
-  FILE *outFile2 = NULL;
+  compressedFileWriter *outFile1 = nullptr;
+  compressedFileWriter *outFile2 = nullptr;
 
   {
     char  *a = strrchr(samPar.output1, '#');
@@ -203,8 +203,8 @@ doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
     *a = '1';
     *b = '2';
 
-    outFile1 = AS_UTL_openOutputFile(samPar.output1);
-    outFile2 = AS_UTL_openOutputFile(samPar.output2);
+    outFile1 = new compressedFileWriter(samPar.output1);
+    outFile2 = new compressedFileWriter(samPar.output2);
   }
 
   //  Scan the inputs, saving the number of sequences in each and the length of each sequence.
@@ -258,8 +258,8 @@ doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
       uint32 of = seqOrder[num].out;
 
       if (of < samPar.numCopies) {
-        outputFASTA(outFile1, seq1.bases(), seq1.length(), 0, seq1.ident());
-        outputFASTA(outFile2, seq2.bases(), seq2.length(), 0, seq2.ident());
+        outputFASTA(outFile1->file(), seq1.bases(), seq1.length(), 0, seq1.ident());
+        outputFASTA(outFile2->file(), seq2.bases(), seq2.length(), 0, seq2.ident());
       }
 
       num += 1;
@@ -272,13 +272,13 @@ doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
     delete sf2;
   }
 
-  AS_UTL_closeFile(outFile1, samPar.output1);
-  AS_UTL_closeFile(outFile2, samPar.output2);
+  delete outFile1;
+  delete outFile2;
 }
 
 
 
-FILE *
+compressedFileWriter *
 doSample_single_openOutput(sampleParameters &samPar, uint32 ii) {
   uint32  ap = 0;
 
@@ -293,7 +293,7 @@ doSample_single_openOutput(sampleParameters &samPar, uint32 ii) {
     fprintf(stderr, "ERROR: Failed to find '#' in output name '%s', and asked to make multiple copies.\n", samPar.output1), exit(1);
 
   if  (samPar.output1[ap] == 0)
-    return(AS_UTL_openOutputFile(samPar.output1));
+    return(new compressedFileWriter(samPar.output1));
 
   //  We've got #'s in the string.  We want to replace the last block of 'em
   //  with digits (ap found above is the start of the first block, sigh).
@@ -338,7 +338,7 @@ doSample_single_openOutput(sampleParameters &samPar, uint32 ii) {
       name[ii] = digs[7 - dp--];
   }
 
-  return(AS_UTL_openOutputFile(name));
+  return(new compressedFileWriter(name));
 }
 
 
@@ -367,7 +367,7 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
 
   fprintf(stderr, "Opening %u output file%s.\n", samPar.numCopies, (samPar.numCopies == 1) ? "" : "s");
 
-  FILE **outFiles = new FILE * [samPar.numCopies];
+  compressedFileWriter **outFiles = new compressedFileWriter * [samPar.numCopies];
 
   for (uint32 ii=0; ii<samPar.numCopies; ii++)
     outFiles[ii] = doSample_single_openOutput(samPar, ii);
@@ -419,7 +419,7 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
       uint32 of = seqOrder[num].out;
 
       if (of < samPar.numCopies)
-        outputSequence(outFiles[of],
+        outputSequence(outFiles[of]->file(),
                        seq1.ident(), seq1.bases(), seq1.quals(), seq1.length(),
                        sf1->isFASTQ(),
                        samPar.outputFASTA,
@@ -438,7 +438,7 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
   fprintf(stderr, "Closing %u output file%s.\n", samPar.numCopies, (samPar.numCopies == 1) ? "" : "s");
 
   for (uint32 ii=0; ii<samPar.numCopies; ii++)
-    AS_UTL_closeFile(outFiles[ii], samPar.output1);
+    delete outFiles[ii];
 
   fprintf(stderr, "Done.\n");
 }
