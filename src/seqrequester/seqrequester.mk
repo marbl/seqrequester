@@ -4,6 +4,7 @@ SOURCES  := seqrequester.C \
             generate.C \
             microsatellite.C \
             mutate.C \
+            partition.C \
             sample.C \
             shiftregister.C \
             shiftregister-emit-fast.C \

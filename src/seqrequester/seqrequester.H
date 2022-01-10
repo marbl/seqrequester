@@ -35,6 +35,7 @@ using namespace std;
 #include "generate.H"
 #include "microsatellite.H"
 #include "mutate.H"
+#include "partition.H"
 #include "sample.H"
 #include "shiftregister.H"
 #include "simulate.H"
@@ -47,6 +48,7 @@ void doSummarize     (vector<char *> &inputs, summarizeParameters       &sumPar)
 void doExtract       (vector<char *> &inputs, extractParameters         &extPar);
 void doGenerate      (                        generateParameters        &genPar);
 void doSimulate      (vector<char *> &inputs, simulateParameters        &simPar);
+void doPartition     (vector<char *> &inputs, partitionParameters       &parPar);
 void doSample        (vector<char *> &inputs, sampleParameters          &samPar);
 void doShiftRegister (                        shiftRegisterParameters   &srPar);
 void doMicroSatellite(vector<char *> &inputs, microsatelliteParameters  &msPar);

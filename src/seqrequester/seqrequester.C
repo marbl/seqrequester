@@ -27,6 +27,7 @@ enum opMode {
   modeExtract,         //  Extract sequences or subsequences from FASTA or FASTQ inputs
   modeGenerate,        //  Generate random sequences
   modeSimulate,        //  Simulate reads from FASTA or FASTQ inputs (ontigs/scaffolds/chromosomes)
+  modePartition,       //  Rewrite inputs into fixed size outputs
   modeSample,          //  Extract random sequences from FASTA or FASTQ inputs
   modeShift,           //  Generate sequence based on a shift register
   modeMicroSatellite,  //  Find microsatellite repeats
@@ -45,8 +46,9 @@ main(int argc, char **argv) {
   summarizeParameters         sumPar;
   extractParameters           extPar;
   generateParameters          genPar;
-  simulateParameters          simPar;
+  partitionParameters         parPar;
   sampleParameters            samPar;
+  simulateParameters          simPar;
   shiftRegisterParameters     srPar;
   microsatelliteParameters    msPar;
   mutateParameters            mutPar;
@@ -284,6 +286,54 @@ main(int argc, char **argv) {
       simPar.test = true;
     }
 
+    //  PARTITION
+
+    else if (strcmp(argv[arg], "partition") == 0) {
+      mode = modePartition;
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-paired") == 0)) {
+      parPar.isPaired = true;
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-output") == 0)) {
+      strncpy(parPar.output1, argv[++arg], FILENAME_MAX);  //  #'s in the name will be replaced
+      strncpy(parPar.output2, argv[  arg], FILENAME_MAX);  //  by '1' or '2' later.
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-writers") == 0)) {
+      parPar.numWriters = strtouint32(argv[++arg]);
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-fasta") == 0)) {
+      parPar.outputFASTA = true;
+    }
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-fastq") == 0)) {
+      parPar.outputFASTQ = true;
+
+      if ((arg+1 < argc) && ('0' <= argv[arg+1][0]) && (argv[arg+1][0] <= '9'))
+        parPar.outputQV = strtouint32(argv[++arg]);
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-coverage") == 0)) {      //  Sample reads up to some coverage C
+      parPar.desiredCoverage = strtodouble(argv[++arg]);
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-genomesize") == 0)) {
+      parPar.genomeSize = strtouint64(argv[++arg]);
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-bases") == 0)) {         //  Sample B bases
+      parPar.desiredNumBases = strtouint64(argv[++arg]);
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-reads") == 0)) {         //  Sample N reads
+      parPar.desiredNumReads = strtouint64(argv[++arg]);
+    }
+
+    else if ((mode == modePartition) && (strcmp(argv[arg], "-pairs") == 0)) {         //  Sample N pairs of reads
+      parPar.desiredNumReads = strtouint64(argv[++arg]) * 2;
+    }
 
     //  SAMPLE
 
@@ -482,28 +532,48 @@ main(int argc, char **argv) {
   if (mode == modeUnset) {
     err.push_back("ERROR:  No mode (summarize, extract, generate or simulate) specified.\n");
   }
+
   if  (mode == modeSummarize) {
     if (inputs.size() == 0)
       err.push_back("ERROR:  No input sequence files supplied.\n");
   }
+
   if  (mode == modeExtract) {
     if (inputs.size() == 0)
       err.push_back("ERROR:  No input sequence files supplied.\n");
   }
+
   if  (mode == modeGenerate) {
   }
+
   if  (mode == modeSimulate) {
     if (simPar.genomeName[0] == 0)
       err.push_back("ERROR:  No reference genome sequence (-genome) supplied.\n");
   }
+
+  if  (mode == modePartition) {
+    if (inputs.size() == 0)
+      err.push_back("ERROR:  No input sequence files supplied.\n");
+    if ((parPar.output1[0] == 0) &&
+        (parPar.output2[0] == 0))
+      err.push_back("ERROR:  No output pattern (-output) supplied.\n");
+    if ((parPar.desiredCoverage == 0) &&
+        (parPar.desiredNumReads == 0) &&
+        (parPar.desiredNumBases == 0))
+      err.push_back("ERROR:  No partitioning size (-coverage, -bases, -reads) supplied.\n");
+  }
+
   if  (mode == modeSample) {
     if (inputs.size() == 0)
       err.push_back("ERROR:  No input sequence files supplied.\n");
   }
+
   if  (mode == modeShift) {
   }
+
   if  (mode == modeMutate) {
   }
+
   if  (mode == modeMicroSatellite) {
     if (inputs.size() == 0)
       err.push_back("ERROR:  No input sequence files supplied.\n");
@@ -610,6 +680,28 @@ main(int argc, char **argv) {
       fprintf(stderr, "\n");
     }
 
+    if ((mode == modeUnset) || (mode == modePartition)) {
+      fprintf(stderr, "OPTIONS for partition mode:\n");
+      fprintf(stderr, "  -paired             treat inputs as paired sequences; the first two files form the\n");
+      fprintf(stderr, "                      first pair, and so on.\n");
+      fprintf(stderr, "                         NOT IMPLEMENTED\n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "  -output O           write output sequences to file O.  If paired, two files must be supplied.\n");
+      fprintf(stderr, "  -fasta              write output as FASTA\n");
+      fprintf(stderr, "  -fastq [q]          write output as FASTQ; if no quality values, use q (integer, 0-based) for all\n");
+      fprintf(stderr, "  -writers N          use N threads for writing (compressed) output.  The last N files will\n");
+      fprintf(stderr, "                      be smaller than requested.\n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "  -coverage C         output C coverage of sequences, based on genome size G.\n");
+      fprintf(stderr, "  -genomesize G       \n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "  -bases B            output B bases.\n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "  -reads R            output R reads.\n");
+      fprintf(stderr, "  -pairs P            output P pairs (only if -paired).\n");
+      fprintf(stderr, "\n");
+    }
+
     if ((mode == modeUnset) || (mode == modeSample)) {
       fprintf(stderr, "OPTIONS for sample mode:\n");
       fprintf(stderr, "  -paired             treat inputs as paired sequences; the first two files form the\n");
@@ -701,6 +793,9 @@ main(int argc, char **argv) {
       break;
     case modeSimulate:
       doSimulate(inputs, simPar);
+      break;
+    case modePartition:
+      doPartition(inputs, parPar);
       break;
     case modeSample:
       doSample(inputs, samPar);
