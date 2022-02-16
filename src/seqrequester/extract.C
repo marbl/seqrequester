@@ -52,6 +52,13 @@ extractParameters::finalize(void) {
       decodeRange(arg, seqsBgn, seqsEnd);
   }
 
+  //  If no sequence range specified, output all sequences.
+
+  if ((seqsName.size() == 0) && (seqsBgn.size() == 0)) {
+    seqsBgn.push_back(1);
+    seqsEnd.push_back(UINT64_MAX);
+  }
+
   //  Decode length ranges.
 
   for (auto arg : lensArgs)
@@ -62,13 +69,6 @@ extractParameters::finalize(void) {
   if (baseBgn.size() == 0) {
     baseBgn.push_back(0);
     baseEnd.push_back(UINT64_MAX);
-  }
-
-  //  If no sequence range specified, output all sequences.
-
-  if (seqsBgn.size() == 0) {
-    seqsBgn.push_back(1);
-    seqsEnd.push_back(UINT64_MAX);
   }
 
   //  If no length restriction, output all lengths.
