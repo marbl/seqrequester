@@ -24,104 +24,52 @@
 
 class extractParameters {
 public:
-  extractParameters() {
-    asReverse      = false;
-    asComplement   = false;
+  extractParameters();
+  ~extractParameters();
 
-    asUpperCase    = false;
-    asLowerCase    = false;
+  void      finalize(void);
 
-    asCompressed   = false;
+private:
+  void      loadNames(void);
 
-    doMasking      = false;
+public:
+  vector<char const *>  baseArgs;               //  Base ranges to print
+  vector<uint64>        baseBgn;                //
+  vector<uint64>        baseEnd;                //
 
-    maskWithN      = true;
+  vector<char const *>  seqsArgs;               //  Sequence ranges to print
+  vector<uint64>        seqsBgn;                //
+  vector<uint64>        seqsEnd;                //
+  stringList            seqsName;               //
 
-    outputFASTA    = false;
-    outputFASTQ    = false;
-    outputQV       = 20;
-  };
+  vector<char const *>  lensArgs;
+  vector<uint64>        lensMin;                //  Length ranges to print
+  vector<uint64>        lensMax;                //
 
-  ~extractParameters() {
-  };
+  bool                  asReverse    = false;
+  bool                  asComplement = false;
 
+  bool                  asUpperCase  = false;
+  bool                  asLowerCase  = false;
 
-  void      finalize(void) {
+  bool                  asCompressed = false;
 
-    //  If no base range specified, output all bases.
+  bool                  doMasking    = false;   //  Mask out any base not in baseBgn/baseEnd with 'N'
 
-    if (baseBgn.size() == 0) {
-      baseBgn.push_back(0);
-      baseEnd.push_back(UINT64_MAX);
-    }
+  bool                  maskWithN    = true;    //  Mask with lowercase sequence instead of 'N'
 
-    //  If no sequence range specified, output all sequences.
+  bool                  outputFASTA  = false;
+  bool                  outputFASTQ  = false;
+  uint8                 outputQV     = 20;
 
-    if (seqsBgn.size() == 0) {
-      seqsBgn.push_back(1);
-      seqsEnd.push_back(UINT64_MAX);
-    }
+  //  Data for doing the extraction.
 
-    //  If no length restriction, output all lengths.
+  char                  C[256] = {0};   //  Complement a base
+  char                  U[256] = {0};   //  Uppercase a base
+  char                  L[256] = {0};   //  Lowercase a base
 
-    if (lensBgn.size() == 0) {
-      lensBgn.push_back(0);
-      lensEnd.push_back(UINT64_MAX);
-    }
-
-    //  Check and adjust the sequence ranges.
-    //
-    //  To the user, sequences begin at ONE, not ZERO.
-    //  To us, sequences begin at zero.
-
-    for (uint32 si=0; si<seqsBgn.size(); si++) {
-      if (seqsBgn[si] == 0) {
-        fprintf(stderr, "ERROR: sequences begin at 1, not zero.\n");
-        exit(1);
-      }
-
-      seqsBgn[si] -= 1;
-    }
-
-    //  Check and adjust the base ranges.  These are space based.  A quirk in the
-    //  command line parsing results in bgn == end if a single number is supplied;
-    //  we interpret that to mean 'output the base at space N'.
-
-    for (uint32 bi=0; bi<baseBgn.size(); bi++) {
-      if (baseBgn[bi] == baseEnd[bi])
-        baseEnd[bi] += 1;
-
-      if (baseEnd[bi] <= baseBgn[bi]) {
-        fprintf(stderr, "ERROR: base range %lu-%lu is invalid, must be increasing.\n",
-                baseBgn[bi], baseEnd[bi]);
-        exit(1);
-      }
-    }
-  };
-
-
-  vector<uint64>  baseBgn;    //  Base ranges to print
-  vector<uint64>  baseEnd;    //
-
-  vector<uint64>  seqsBgn;    //  Sequence ranges to print
-  vector<uint64>  seqsEnd;    //
-
-  vector<uint64>  lensBgn;    //  Length ranges to print
-  vector<uint64>  lensEnd;    //
-
-  bool          asReverse;
-  bool          asComplement;
-
-  bool          asUpperCase;
-  bool          asLowerCase;
-
-  bool          asCompressed;
-
-  bool          doMasking;    //  Mask out any base not in baseBgn/baseEnd with 'N'
-
-  bool          maskWithN;    //  Mask with lowercase sequence instead of 'N'
-
-  bool          outputFASTA;
-  bool          outputFASTQ;
-  uint8         outputQV;
+  uint64                outputBasesLen  = 0;
+  uint64                outputBasesMax  = 0;        //1048576;
+  char                 *outputBases     = nullptr;  //new char [outputBasesMax];
+  uint8                *outputQuals     = nullptr;  //new char [outputBasesMax];
 };

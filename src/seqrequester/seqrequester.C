@@ -106,7 +106,7 @@ main(int argc, char **argv) {
     }
 
     else if ((mode == modeExtract) && (strcmp(argv[arg], "-sequences") == 0)) {
-      decodeRange(argv[++arg], extPar.seqsBgn, extPar.seqsEnd);
+      extPar.seqsArgs.push_back(argv[++arg]);
     }
 
     else if ((mode == modeExtract) && (strcmp(argv[arg], "-reverse") == 0)) {
@@ -135,7 +135,7 @@ main(int argc, char **argv) {
     }
 
     else if ((mode == modeExtract) && (strcmp(argv[arg], "-length") == 0)) {
-      decodeRange(argv[++arg], extPar.lensBgn, extPar.lensEnd);
+      extPar.lensArgs.push_back(argv[++arg]);
     }
 
     else if ((mode == modeExtract) && (strcmp(argv[arg], "-lowermask") == 0)) {
@@ -616,37 +616,45 @@ main(int argc, char **argv) {
 
     if ((mode == modeUnset) || (mode == modeExtract)) {
       fprintf(stderr, "OPTIONS for extract mode:\n");
-      fprintf(stderr, "  -bases     baselist extract bases as specified in the 'list' from each sequence\n");
-      fprintf(stderr, "  -sequences seqlist  extract ordinal sequences as specified in the 'list'\n");
+      fprintf(stderr, "  -bases     baselist   extract bases specified in the 'baselist' from\n");
+      fprintf(stderr, "                        each sequence\n");
+      fprintf(stderr, "  -sequences seqlist    extract ordinal sequences specified in the 'seqlist'\n");
+      fprintf(stderr, "  -sequences namefile   extract sequences with names listed in 'namefile'\n");
       fprintf(stderr, "\n");
-      fprintf(stderr, "  -reverse            reverse the bases in the sequence\n");
-      fprintf(stderr, "  -complement         complement the bases in the sequence\n");
-      fprintf(stderr, "  -rc                 alias for -reverse -complement\n");
+      fprintf(stderr, "  -reverse              reverse the bases in the sequence\n");
+      fprintf(stderr, "  -complement           complement the bases in the sequence\n");
+      fprintf(stderr, "  -rc                   alias for -reverse -complement\n");
       fprintf(stderr, "\n");
-      fprintf(stderr, "  -compress           compress homopolymer runs to one base\n");
+      fprintf(stderr, "  -compress             compress homopolymer runs to one base\n");
       fprintf(stderr, "\n");
       fprintf(stderr, "  -upcase\n");
       fprintf(stderr, "  -downcase\n");
       fprintf(stderr, "\n");
-      fprintf(stderr, "  -fasta              write output as FASTA\n");
-      fprintf(stderr, "  -fastq [q]          write output as FASTQ; if no quality values, use q (integer, 0-based) for all\n");
+      fprintf(stderr, "  -fasta                write output as FASTA\n");
+      fprintf(stderr, "  -fastq [q]            write output as FASTQ; if no quality values, use q\n");
+      fprintf(stderr, "                        (integer, 0-based) for all bases; default q=20\n");
       fprintf(stderr, "\n");
-      fprintf(stderr, "  -length min-max     print sequence if it is at least 'min' bases and at most 'max' bases long\n");
+      fprintf(stderr, "  -length min-max       print sequence if it is at least 'min' bases and at\n");
+      fprintf(stderr, "                        most 'max' bases long\n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "    a 'baselist' is a set of integers formed from any combination\n");
+      fprintf(stderr, "    of the following, seperated by a comma:\n");
+      fprintf(stderr, "         num       a single number\n");
+      fprintf(stderr, "         bgn-end   a range of numbers:  bgn <= end\n");
+      fprintf(stderr, "    bases are spaced-based; -bases 0-2,4 will print the bases between\n");
+      fprintf(stderr, "    the first two spaces (the first two bases) and the base after the\n");
+      fprintf(stderr, "    fourth space (the fifth base).\n");
       fprintf(stderr, "  \n");
-      fprintf(stderr, "                      a 'baselist' is a set of integers formed from any combination\n");
-      fprintf(stderr, "                      of the following, seperated by a comma:\n");
-      fprintf(stderr, "                           num       a single number\n");
-      fprintf(stderr, "                           bgn-end   a range of numbers:  bgn <= end\n");
-      fprintf(stderr, "                      bases are spaced-based; -bases 0-2,4 will print the bases between\n");
-      fprintf(stderr, "                      the first two spaces (the first two bases) and the base after the\n");
-      fprintf(stderr, "                      fourth space (the fifth base).\n");
+      fprintf(stderr, "    a 'seqlist' is a set of integers formed from any combination\n");
+      fprintf(stderr, "    of the following, seperated by a comma:\n");
+      fprintf(stderr, "         num       a single number\n");
+      fprintf(stderr, "         bgn-end   a range of numbers:  bgn <= end\n");
+      fprintf(stderr, "    sequences are 1-based; -sequences 1,3-5 will print the first, third,\n");
+      fprintf(stderr, "    fourth and fifth sequences.\n");
       fprintf(stderr, "  \n");
-      fprintf(stderr, "                      a 'seqlist' is a set of integers formed from any combination\n");
-      fprintf(stderr, "                      of the following, seperated by a comma:\n");
-      fprintf(stderr, "                           num       a single number\n");
-      fprintf(stderr, "                           bgn-end   a range of numbers:  bgn <= end\n");
-      fprintf(stderr, "                      sequences are 1-based; -sequences 1,3-5 will print the first, third,\n");
-      fprintf(stderr, "                      fourth and fifth sequences.\n");
+      fprintf(stderr, "    a 'namefile' contains the names of sequences to extract, one per line,\n");
+      fprintf(stderr, "    without any leading '>' or '@'.  a name is the first word on the ident line.\n");
+      fprintf(stderr, "    NOTA BENE: at most one namefile cn be supplied.\n");
       fprintf(stderr, "  \n");
     }
 
