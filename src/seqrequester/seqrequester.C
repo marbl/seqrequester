@@ -274,6 +274,12 @@ main(int argc, char **argv) {
       simPar.rcProb = strtodouble(argv[++arg]);
     }
 
+    else if ((mode == modeSimulate) && (strcmp(argv[arg], "-seed") == 0)) {
+      simPar.randomSeedValid = true;
+      simPar.randomSeed      = strtouint32(argv[++arg]);
+    }
+
+
     //else if ((mode == modeSimulate) && (strcmp(argv[arg], "-name") == 0)) {
     //  strncpy(simPar.sequenceName, argv[++arg], FILENAME_MAX);
     //}

@@ -55,6 +55,9 @@ public:
 
   double  rcProb             = 0.5;
 
+  bool    randomSeedValid    = false;
+  uint32  randomSeed         = 0;
+
   mtRandom             mt;
   sampledDistribution  dist;
 

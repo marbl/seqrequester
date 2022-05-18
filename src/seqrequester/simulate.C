@@ -446,6 +446,9 @@ doSimulate(vector<char *>     &inputs,
   if (simPar.desiredNumBases > 0)
     nBasesMax = simPar.desiredNumBases;
 
+  if (simPar.randomSeedValid)
+    simPar.mt.mtSetSeed(simPar.randomSeed);
+
   //  Fail?
 
   if ((nBasesMax == uint64max) &&
