@@ -446,6 +446,9 @@ doSimulate(vector<char *>     &inputs,
   if (simPar.desiredNumBases > 0)
     nBasesMax = simPar.desiredNumBases;
 
+  if (simPar.randomSeedValid)
+    simPar.mt.mtSetSeed(simPar.randomSeed);
+
   //  Fail?
 
   if ((nBasesMax == uint64max) &&
@@ -466,6 +469,11 @@ doSimulate(vector<char *>     &inputs,
   uint64            seqsLen = 0;
 
   doSimulate_loadSequences(simPar, seqs, seqsLen);
+  // Reset nBaseMax when the coverage is given while the genomeSize is not
+  if ( (simPar.desiredCoverage > 0) && (simPar.genomeSize == 0) ) {
+      simPar.genomeSize = seqsLen;
+      nBasesMax = simPar.desiredCoverage * simPar.genomeSize;
+  }
 
   //  Make reads!
 
