@@ -18,9 +18,9 @@
  */
 
 #include "seqrequester.H"
+
 #include "shiftregister-gf4.H"
 #include "bits.H"
-
 
 void
 searchShiftRegisterFast(shiftRegisterParameters &srPar) {

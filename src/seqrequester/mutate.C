@@ -19,9 +19,90 @@
 
 #include "seqrequester.H"
 
-#include "arrays.H"
-#include "sequence.H"
-#include "mt19937ar.H"
+bool
+mutateParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
+
+  if (strcmp(argv[arg], "mutate") == 0) {
+    mode = modeMutate;
+  }
+
+  else if ((mode == modeMutate) && (strcmp(argv[arg], "-s") == 0)) {
+    double  p = strtodouble(argv[arg+1]);
+    char    a = argv[arg+2][0];
+    char    b = argv[arg+3][0];
+
+    arg += 3;
+
+    setProbabilitySubstititue(p, a, b);
+  }
+
+  else if ((mode == modeMutate) && (strcmp(argv[arg], "-i") == 0)) {
+    double  p = strtodouble(argv[arg+1]);
+    char    a = argv[arg+2][0];
+
+    arg += 2;
+
+    setProbabilityInsert(p, a);
+  }
+
+  else if ((mode == modeMutate) && (strcmp(argv[arg], "-d") == 0)) {
+    double  p = strtodouble(argv[arg+1]);
+    char    a = argv[arg+2][0];
+
+    arg += 2;
+
+    setProbabilityDelete(p, a);
+  }
+
+  else if ((mode == modeMutate) && (strcmp(argv[arg], "-seed") == 0)) {
+    mt.mtSetSeed(strtouint32(argv[++arg]));
+  }
+
+  else {
+    return(false);
+  }
+
+  return(true);
+}
+
+
+
+void
+mutateParameters::showUsage(opMode mode) {
+
+  if (mode != modeMicroSatellite)
+    return;
+
+  fprintf(stderr, "OPTIONS for mutate mode:\n");
+  fprintf(stderr, "  -s p a b   set the probability of substituting 'a' with 'b' to 'p'.\n");
+  fprintf(stderr, "  -i p a     set the probability of inserting an 'a' to 'p'.\n");
+  fprintf(stderr, "  -d p a     set the probability of deleting an 'a' to 'p'.\n");
+}
+
+
+
+bool
+mutateParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+
+  if (mode != modeMutate)
+    return(false);
+
+  for (uint32 ii=0; ii<256; ii++)
+    pSubstitute[ii] = 0.0;
+
+  pInsert = 0.0;
+
+  for (uint32 ii=0; ii<256; ii++) {
+    for (uint32 jj=0; jj<256; jj++)
+      pSubstitute[ii] += pS[ii][jj];
+
+    pInsert           += pI[ii];
+    pDelete           += pD[ii];
+  }
+
+  return(errors.size() > 0);
+}
+
 
 
 void
@@ -71,16 +152,12 @@ doMutate_insert(double p,
 
 
 void
-doMutate(vector<char *> &inputs, mutateParameters &mutPar) {
-  mtRandom   MT;
-
-  mutPar.finalize();
-
+doMutate(vector<char const *> &inputs, mutateParameters &mutPar) {
   dnaSeq     seq;
 
   uint32     nMax   = 0;
-  char      *nBases = NULL;
-  uint8     *nQuals = NULL;
+  char      *nBases = nullptr;
+  uint8     *nQuals = nullptr;
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
     dnaSeqFile  *sf     = new dnaSeqFile(inputs[ff]);
@@ -110,7 +187,7 @@ doMutate(vector<char *> &inputs, mutateParameters &mutPar) {
 
         //  If a chance of doing something, make a random number.
         if (mutPar.pSubstitute[base] + mutPar.pInsert + mutPar.pD[base] > 0.0)
-          p = MT.mtRandomRealClosed();
+          p = mutPar.mt.mtRandomRealClosed();
 
         //  If a substitution, make it.
         if (p < mutPar.pSubstitute[base]) {
@@ -144,7 +221,7 @@ doMutate(vector<char *> &inputs, mutateParameters &mutPar) {
 
 
       //  And one more for an inserting at the end of the read.
-      double p = MT.mtRandomRealClosed();
+      double p = mutPar.mt.mtRandomRealClosed();
 
       if (p < mutPar.pInsert)
         doMutate_insert(p, 0, 0, nBases, nQuals, oLen, mutPar);

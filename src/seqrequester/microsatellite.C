@@ -17,11 +17,84 @@
  */
 
 #include "seqrequester.H"
-#include "sequence.H"
 
 #include "outAT.C"
 #include "outGC.C"
 #include "outGA.C"
+
+bool
+microsatelliteParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
+
+  if ((strcmp(argv[arg], "microsatellite") == 0) ||
+      (strcmp(argv[arg], "microsat") == 0)) {
+    mode = modeMicroSatellite;
+  }
+
+  else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-prefix") == 0)) {
+    outPrefix = argv[++arg];
+  }
+
+  else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-window") == 0)) {
+    window = strtouint32(argv[++arg]);
+  }
+
+  else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-ga") == 0)) {
+    report_ga = true;
+  }
+  else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-gc") == 0)) {
+    report_gc = true;
+  }
+  else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-at") == 0)) {
+    report_at = true;
+  }
+
+  else if ((mode == modeMicroSatellite) && (strcmp(argv[arg], "-legacy") == 0)) {
+    report_legacy = true;
+  }
+
+  else {
+    return(false);
+  }
+
+  return(true);
+}
+
+
+
+void
+microsatelliteParameters::showUsage(opMode mode) {
+
+  if (mode != modeMicroSatellite)
+    return;
+
+  fprintf(stderr, "OPTIONS for microsatellite mode:\n");
+  fprintf(stderr, "  -prefix P      write output to <P>.<pattern>.bed\n");
+  fprintf(stderr, "  -window w      compute in windows of size w; default write output to <prefix.<pattern>.bed\n");
+
+  fprintf(stderr, "  -ga            compute GA/TC repeat content\n");
+  fprintf(stderr, "  -gc            compute GC repeat content\n");
+  fprintf(stderr, "  -at            compute AT repeat content\n");
+}
+
+
+
+bool
+microsatelliteParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+
+  if (mode != modeMicroSatellite)
+    return(false);
+
+  if (inputs.size() == 0)
+    sprintf(errors, "ERROR:  No input sequence files supplied.\n");
+
+  if ((report_ga == false) &&
+      (report_gc == false) &&
+      (report_at == false))
+    sprintf(errors, "ERROR:  No microsatellite pattern supplied.\n");
+
+  return(errors.size() > 0);
+}
+
 
 
 void
@@ -189,7 +262,7 @@ computeMicroSat(dnaSeqFile *seqFile,
 
 
 void
-doMicroSatellite(vector<char *>           &inputs,
+doMicroSatellite(vector<char const *>     &inputs,
                  microsatelliteParameters &msPar) {
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
@@ -224,8 +297,8 @@ doMicroSatellite(vector<char *>           &inputs,
 #if 0
 int
 main(int argc, char **argv) {
-  char   *seqName     = NULL;
-  char   *outPrefix   = NULL;
+  char   *seqName     = nullptr;
+  char   *outPrefix   = nullptr;
   bool    verbose     = false;
   uint32  reportType  = OP_NONE;
   int     window      = 128;
@@ -263,7 +336,7 @@ main(int argc, char **argv) {
     arg++;
   }
 
-  if (seqName == NULL)
+  if (seqName == nullptr)
     err.push_back("No input sequence (-seq) supplied.\n");
 
   if (err.size() > 0) {
@@ -279,7 +352,7 @@ main(int argc, char **argv) {
   }
 
   fprintf(stderr, "Open sequence '%s'.\n", seqName);
-  dnaSeqFile  *seqFile = NULL;
+  dnaSeqFile  *seqFile = nullptr;
   seqFile = new dnaSeqFile(seqName);
 
   if (reportType == OP_GA)

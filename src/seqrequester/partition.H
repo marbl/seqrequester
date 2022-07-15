@@ -24,59 +24,34 @@
 
 class partitionParameters {
 public:
-  partitionParameters() {
-    isPaired        = false;
+  partitionParameters() {}
+  ~partitionParameters() {}
 
-    desiredCoverage = 0.0;
-    genomeSize      = 0;
+  bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
+  void      showUsage(opMode mode);
 
-    desiredNumReads = 0;
-    desiredNumBases = 0;
+  bool      checkOptions(opMode mode, std::vector<char const *> &inputs, std::vector<char const *> &errors);
 
-    desiredFraction = 0.0;
+  bool    isPaired         = false;
 
-    outputFASTA     = false;
-    outputFASTQ     = false;
-    outputQV        = 20;
+  double  desiredCoverage  = 0.0;
+  uint64  genomeSize       = 0;
 
-    numWriters      = 4;
+  uint64  desiredNumReads  = uint64max;
+  uint64  desiredNumBases  = uint64max;
 
-    memset(output1, 0, FILENAME_MAX+1);
-    memset(output2, 0, FILENAME_MAX+1);
-  }
+  double  desiredFraction  = 0.0;
 
-  ~partitionParameters() {
-  }
+  bool    randomSeedValid  = false;
+  uint32  randomSeed       = 0;
 
+  bool    outputFASTA      = false;
+  bool    outputFASTQ      = false;
+  uint8   outputQV         = 20;
 
-  void      initialize(void) {
-  };
+  uint32  numWriters       = 4;
 
-
-  void      finalize(void) {
-  }
-
-
-  bool    isPaired;
-
-  double  desiredCoverage;
-  uint64  genomeSize;
-
-  uint64  desiredNumReads;
-  uint64  desiredNumBases;
-
-  double  desiredFraction;
-
-  bool    randomSeedValid;
-  uint32  randomSeed;
-
-  bool    outputFASTA;
-  bool    outputFASTQ;
-  uint8   outputQV;
-
-  uint32  numWriters;
-
-  char    output1[FILENAME_MAX+1];
-  char    output2[FILENAME_MAX+1];
+  char    output1[FILENAME_MAX+1] = {0};
+  char    output2[FILENAME_MAX+1] = {0};
 };
 

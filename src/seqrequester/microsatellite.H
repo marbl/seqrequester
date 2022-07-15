@@ -24,19 +24,15 @@
 
 class microsatelliteParameters {
 public:
-  microsatelliteParameters() {
-  }
-  ~microsatelliteParameters() {
-  }
+  microsatelliteParameters() {}
+  ~microsatelliteParameters() {}
 
-  void      initialize(void) {
-  }
+  bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
+  void      showUsage(opMode mode);
 
-  void      finalize(void) {
-  }
+  bool      checkOptions(opMode mode, std::vector<char const *> &inputs, std::vector<char const *> &errors);
 
-
-  //char const  *seqName;   vector<inputs>
+public:
   char const  *outPrefix  = nullptr;
 
   uint32       window     = 128;
@@ -46,11 +42,4 @@ public:
   bool         report_at  = false;
 
   bool         report_legacy = false;
-
-
-#if 0
-  char         seqName[FILENAME_MAX+1];
-  char         distribName[FILENAME_MAX+1];
-  char         outputName[FILENAME_MAX+1];
-#endif
 };

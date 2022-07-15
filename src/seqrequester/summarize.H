@@ -24,14 +24,13 @@
 
 class summarizeParameters {
 public:
-  summarizeParameters() {
-  };
+  summarizeParameters() {}
+  ~summarizeParameters() {}
 
-  ~summarizeParameters() {
-  };
+  bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
+  void      showUsage(opMode mode);
 
-  void      finalize(void) {
-  }
+  bool      checkOptions(opMode mode, std::vector<char const *> &inputs, std::vector<char const *> &errors);
 
   uint64    genomeSize  = 0;
 

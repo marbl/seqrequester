@@ -19,23 +19,138 @@
 
 #include "seqrequester.H"
 
-#include "arrays.H"
-#include "sequence.H"
+bool
+extractParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
 
+  if (strcmp(argv[arg], "extract") == 0) {
+    mode = modeExtract;
+  }
 
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-bases") == 0)) {
+    decodeRange(argv[++arg], baseBgn, baseEnd);
+  }
 
-extractParameters::extractParameters() {
-}
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-sequences") == 0)) {
+    seqsArgs.push_back(argv[++arg]);
+  }
 
-extractParameters::~extractParameters() {
-  for (uint64 ii=0; ii<seqsName.size(); ii++)
-    delete [] seqsName[ii];
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-reverse") == 0)) {
+    asReverse = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-complement") == 0)) {
+    asComplement = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-rc") == 0)) {
+    asReverse = true;
+    asComplement = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-upper") == 0)) {
+    asUpperCase = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-lower") == 0)) {
+    asLowerCase = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-compress") == 0)) {
+    asCompressed = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-length") == 0)) {
+    lensArgs.push_back(argv[++arg]);
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-lowermask") == 0)) {
+    doMasking = true;
+    maskWithN = false;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-nmask") == 0)) {
+    doMasking = true;
+    maskWithN = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-fasta") == 0)) {
+    outputFASTA = true;
+  }
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-fastq") == 0)) {
+    outputFASTQ = true;
+
+    if ((arg+1 < argc) && ('0' <= argv[arg+1][0]) && (argv[arg+1][0] <= '9'))
+      outputQV = strtouint32(argv[++arg]);
+  }
+
+  else {
+    return(false);
+  }
+
+  return(true);
 }
 
 
 
 void
-extractParameters::finalize(void) {
+extractParameters::showUsage(opMode mode) {
+
+  if (mode != modeExtract)
+    return;
+
+  fprintf(stderr, "OPTIONS for extract mode:\n");
+  fprintf(stderr, "  -bases     baselist   extract bases specified in the 'baselist' from\n");
+  fprintf(stderr, "                        each sequence\n");
+  fprintf(stderr, "  -sequences seqlist    extract ordinal sequences specified in the 'seqlist'\n");
+  fprintf(stderr, "  -sequences namefile   extract sequences with names listed in 'namefile'\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -reverse              reverse the bases in the sequence\n");
+  fprintf(stderr, "  -complement           complement the bases in the sequence\n");
+  fprintf(stderr, "  -rc                   alias for -reverse -complement\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -compress             compress homopolymer runs to one base\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -upcase\n");
+  fprintf(stderr, "  -downcase\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -fasta                write output as FASTA\n");
+  fprintf(stderr, "  -fastq [q]            write output as FASTQ; if no quality values, use q\n");
+  fprintf(stderr, "                        (integer, 0-based) for all bases; default q=20\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -length min-max       print sequence if it is at least 'min' bases and at\n");
+  fprintf(stderr, "                        most 'max' bases long\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "    a 'baselist' is a set of integers formed from any combination\n");
+  fprintf(stderr, "    of the following, seperated by a comma:\n");
+  fprintf(stderr, "         num       a single number\n");
+  fprintf(stderr, "         bgn-end   a range of numbers:  bgn <= end\n");
+  fprintf(stderr, "    bases are spaced-based; -bases 0-2,4 will print the bases between\n");
+  fprintf(stderr, "    the first two spaces (the first two bases) and the base after the\n");
+  fprintf(stderr, "    fourth space (the fifth base).\n");
+  fprintf(stderr, "  \n");
+  fprintf(stderr, "    a 'seqlist' is a set of integers formed from any combination\n");
+  fprintf(stderr, "    of the following, seperated by a comma:\n");
+  fprintf(stderr, "         num       a single number\n");
+  fprintf(stderr, "         bgn-end   a range of numbers:  bgn <= end\n");
+  fprintf(stderr, "    sequences are 1-based; -sequences 1,3-5 will print the first, third,\n");
+  fprintf(stderr, "    fourth and fifth sequences.\n");
+  fprintf(stderr, "  \n");
+  fprintf(stderr, "    a 'namefile' contains the names of sequences to extract, one per line,\n");
+  fprintf(stderr, "    without any leading '>' or '@'.  a name is the first word on the ident line.\n");
+  fprintf(stderr, "    NOTA BENE: at most one namefile cn be supplied.\n");
+  fprintf(stderr, "  \n");
+}
+
+
+
+bool
+extractParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+
+  if (mode != modeExtract)
+    return(false);
+
+  if (inputs.size() == 0)
+    sprintf(errors, "ERROR:  No input sequence files supplied.\n");
 
   //  Decode base ranges.
 
@@ -45,7 +160,6 @@ extractParameters::finalize(void) {
   //  Decode sequence ranges.
 
   for (auto arg : seqsArgs) {
-    fprintf(stderr, "Parse '%s'\n", arg);
     if (fileExists(arg) == true)
       seqsName.load(arg, splitWords);
     else
@@ -84,10 +198,8 @@ extractParameters::finalize(void) {
   //  To us, sequences begin at zero.
 
   for (uint32 si=0; si<seqsBgn.size(); si++) {
-    if (seqsBgn[si] == 0) {
-      fprintf(stderr, "ERROR: sequences begin at 1, not zero.\n");
-      exit(1);
-    }
+    if (seqsBgn[si] == 0)
+      sprintf(errors, "ERROR: sequences begin at 1, not zero.\n");
 
     seqsBgn[si] -= 1;
   }
@@ -100,11 +212,9 @@ extractParameters::finalize(void) {
     if (baseBgn[bi] == baseEnd[bi])
       baseEnd[bi] += 1;
 
-    if (baseEnd[bi] <= baseBgn[bi]) {
-      fprintf(stderr, "ERROR: base range %lu-%lu is invalid, must be increasing.\n",
+    if (baseEnd[bi] <= baseBgn[bi])
+      sprintf(errors, "ERROR: base range %lu-%lu is invalid, must be increasing.\n",
               baseBgn[bi], baseEnd[bi]);
-      exit(1);
-    }
   }
 
   //  Allocate a big string, but since we don't know the actual max length,
@@ -126,6 +236,8 @@ extractParameters::finalize(void) {
   C['C'] = 'G';  U['C'] = 'C';  L['C'] = 'c';
   C['G'] = 'C';  U['G'] = 'G';  L['G'] = 'g';
   C['T'] = 'A';  U['T'] = 'T';  L['T'] = 't';
+
+  return(errors.size() > 0);
 }
 
 
@@ -277,8 +389,8 @@ printSequence(dnaSeq &seq,
 
 
 void
-doExtract(vector<char *>    &inputs,
-          extractParameters &extPar) {
+doExtract(vector<char const *> &inputs,
+          extractParameters    &extPar) {
   dnaSeq    seq;
 
   for (uint32 fi=0; fi<inputs.size(); fi++) {
@@ -287,7 +399,7 @@ doExtract(vector<char *>    &inputs,
     //  If desired names exist or the file is compressed, load every sequence
     //  and output a sequence if is desired.
     //
-    if ((extPar.seqsName.size() > 0) || (sf->isCompressed() == true)) {
+    if ((extPar.seqsName.size() > 0) || (sf->isIndexable() == false)) {
       while (sf->loadSequence(seq) == true)
         if (isDesired(sf->seqIdx(), seq.ident(), seq.length(), extPar))
           printSequence(seq, sf, extPar);
@@ -299,12 +411,14 @@ doExtract(vector<char *>    &inputs,
     //  reported as errors.
     //
     else {
+      sf->generateIndex();
+
       for (uint32 si=0; si<extPar.seqsBgn.size(); si++) {
         uint64  sbgn = min(extPar.seqsBgn[si], sf->numberOfSequences());
         uint64  send = min(extPar.seqsEnd[si], sf->numberOfSequences());
 
         for (uint64 ss=sbgn; ss<send; ss++)
-          if (isDesired(sf->seqIdx(), nullptr, sf->sequenceLength(ss), extPar) &&
+          if (isDesired(ss, nullptr, sf->sequenceLength(ss), extPar) &&
               sf->findSequence(ss) &&
               sf->loadSequence(seq))
             printSequence(seq, sf, extPar);

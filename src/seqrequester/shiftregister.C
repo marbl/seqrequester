@@ -18,12 +18,89 @@
  */
 
 #include "seqrequester.H"
+
 #include "bits.H"
+
+bool
+shiftRegisterParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
+
+  if (strcmp(argv[arg], "shift") == 0) {
+    mode = modeShift;
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-order") == 0)) {
+    order  = strtouint32(argv[++arg]);
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-weight") == 0)) {
+    weight  = strtouint32(argv[++arg]);
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-emit") == 0)) {
+    search = false;
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-length") == 0)) {
+    length = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-search") == 0)) {
+    search = true;
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-report") == 0)) {
+    report = strtodouble(argv[++arg]);
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-fast") == 0)) {
+    fast   = true;
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-state") == 0)) {   //  Initial sequence
+    strcpy(sr, argv[++arg]);                                              //  ACGTGGTAA
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-tap") == 0)) {     //  SR control bits
+    strcpy(svmin, argv[++arg]);                                           //  011010011
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-tapmin") == 0)) {  //  SR control bits
+    strcpy(svmin, argv[++arg]);                                           //  011010011
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "-tapmax") == 0)) {  //  SR control bits
+    strcpy(svmax, argv[++arg]);                                           //  011010011
+  }
+
+  else if ((mode == modeShift) && (strcmp(argv[arg], "") == 0)) {
+  }
+
+  else {
+    return(false);
+  }
+
+  return(true);
+}
 
 
 
 void
-shiftRegisterParameters::initialize(void) {
+shiftRegisterParameters::showUsage(opMode mode) {
+
+  if (mode != modeShift)
+    return;
+
+  fprintf(stderr, "No help for mode shift.\n");
+}
+
+
+
+bool
+shiftRegisterParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+
+  if (mode != modeShift)
+    return(false);
+
   uint32 srLen = strlen(sr);
   uint32 snLen = strlen(svmin);
   uint32 sxLen = strlen(svmax);
@@ -40,17 +117,18 @@ shiftRegisterParameters::initialize(void) {
   fail |= ((sxLen > 0) && (snLen != order));
 
   if (fail == true) {
-    fprintf(stderr, "ERROR: order %u\n", order);
-    fprintf(stderr, "ERROR: sr    %s len %u\n", sr,    srLen);
-    fprintf(stderr, "ERROR: svmin %s len %u\n", svmin, snLen);
-    fprintf(stderr, "ERROR: svmax %s len %u\n", svmax, sxLen);
+    sprintf(errors, "ERROR: order %u\n", order);
+    sprintf(errors, "ERROR: sr    %s len %u\n", sr,    srLen);
+    sprintf(errors, "ERROR: svmin %s len %u\n", svmin, snLen);
+    sprintf(errors, "ERROR: svmax %s len %u\n", svmax, sxLen);
   }
-
   assert(fail == false);
 
   if (srLen > 0)   std::reverse(sr,    sr    + srLen);
   if (snLen > 0)   std::reverse(svmin, svmin + snLen);
   if (sxLen > 0)   std::reverse(svmax, svmax + sxLen);
+
+  return(errors.size() > 0);
 }
 
 
@@ -151,8 +229,6 @@ void  emitShiftRegisterSlow(shiftRegisterParameters &srPar) {
 
 void
 doShiftRegister(shiftRegisterParameters &srPar) {
-
-  srPar.initialize();
 
   fprintf(stderr, "VERSION 7\n");
 

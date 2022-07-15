@@ -40,6 +40,11 @@ public:
   ~mutateParameters() {
   };
 
+  bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
+  void      showUsage(opMode mode);
+
+  bool      checkOptions(opMode mode, std::vector<char const *> &inputs, std::vector<char const *> &errors);
+
 public:
   void      setProbabilitySubstititue(double p, char baseToReplace, char replacementBase) {
     fprintf(stderr, "sub %c -> %c %f\n", baseToReplace, replacementBase, p);
@@ -56,22 +61,6 @@ public:
     pD[baseToDelete] = p;
   };
 
-  void      finalize(void) {
-
-    for (uint32 ii=0; ii<256; ii++)
-      pSubstitute[ii] = 0.0;
-
-    pInsert = 0.0;
-
-    for (uint32 ii=0; ii<256; ii++) {
-      for (uint32 jj=0; jj<256; jj++)
-        pSubstitute[ii] += pS[ii][jj];
-
-      pInsert           += pI[ii];
-      pDelete           += pD[ii];
-    }
-  };
-
 
   //  probability of substituting base [a] with [b]    (base based)
   //  probability of inserting    an A, C, G, T, N     (space based)
@@ -80,11 +69,13 @@ public:
   //  extensions:
   //  probability of inserting ACGTN between bases a and b.
   //
-  double  pS[256][256];
-  double  pI[256];
-  double  pD[256];
+  double     pS[256][256];
+  double     pI[256];
+  double     pD[256];
 
-  double  pSubstitute[256];   //  Probability of substituting 'a' for anything.
-  double  pInsert;            //  Probability of inserting any base.
-  double  pDelete;
+  double     pSubstitute[256];   //  Probability of substituting 'a' for anything.
+  double     pInsert;            //  Probability of inserting any base.
+  double     pDelete;
+
+  mtRandom   mt;
 };

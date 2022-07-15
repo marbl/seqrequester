@@ -25,60 +25,35 @@
 class sampleParameters {
 public:
   sampleParameters() {
-    isPaired        = false;
-
-    numCopies       = 1;
-
-    desiredCoverage = 0.0;
-    genomeSize      = 0;
-
-    desiredNumReads = 0;
-    desiredNumBases = 0;
-
-    desiredFraction = 0.0;
-
-    randomSeedValid = false;
-    randomSeed      = 0;
-
-    outputFASTA     = false;
-    outputFASTQ     = false;
-    outputQV        = 20;
-
-    memset(output1, 0, FILENAME_MAX+1);
-    memset(output2, 0, FILENAME_MAX+1);
+    //output1 = new char [FILENAME_MAX+1];
+    //output2 = new char [FILENAME_MAX+1];
   }
+  ~sampleParameters() {}
 
-  ~sampleParameters() {
-  }
+  bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
+  void      showUsage(opMode mode);
 
+  bool      checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors);
 
-  void      initialize(void) {
-  };
+public:
+  bool      isPaired = false;
 
+  uint32    numCopies = 1;
 
-  void      finalize(void) {
-  }
+  double    desiredCoverage = 0.0;
+  uint64    genomeSize = 0;
 
+  uint64    desiredNumReads = 0;
+  uint64    desiredNumBases = 0;
 
-  bool    isPaired;
+  double    desiredFraction = 0.0;
 
-  uint32  numCopies;
+  mtRandom  mt;
 
-  double  desiredCoverage;
-  uint64  genomeSize;
+  bool      outputFASTA = false;
+  bool      outputFASTQ = false;
+  uint8     outputQV = 20;
 
-  uint64  desiredNumReads;
-  uint64  desiredNumBases;
-
-  double  desiredFraction;
-
-  bool    randomSeedValid;
-  uint32  randomSeed;
-
-  bool    outputFASTA;
-  bool    outputFASTQ;
-  uint8   outputQV;
-
-  char    output1[FILENAME_MAX+1];
-  char    output2[FILENAME_MAX+1];
+  char const *output1 = nullptr;//[FILENAME_MAX+1] = {0};
+  char const *output2 = nullptr;//[FILENAME_MAX+1] = {0};
 };

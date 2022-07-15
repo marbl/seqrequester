@@ -20,7 +20,11 @@
 #include "runtime.H"
 
 #include "strings.H"
+#include "arrays.H"
 #include "files.H"
+
+#include "sequence.H"
+#include "mt19937ar.H"
 
 #include <vector>
 #include <set>
@@ -28,6 +32,18 @@
 
 using namespace std;
 
+enum opMode {
+  modeSummarize,       //  Summarize sequences in FASTA or FASTQ inputs
+  modeExtract,         //  Extract sequences or subsequences from FASTA or FASTQ inputs
+  modeGenerate,        //  Generate random sequences
+  modeSimulate,        //  Simulate reads from FASTA or FASTQ inputs (ontigs/scaffolds/chromosomes)
+  modePartition,       //  Rewrite inputs into fixed size outputs
+  modeSample,          //  Extract random sequences from FASTA or FASTQ inputs
+  modeShift,           //  Generate sequence based on a shift register
+  modeMicroSatellite,  //  Find microsatellite repeats
+  modeMutate,          //  Randomly mutate bases
+  modeUnset            //  Cause an error
+};
 
 #define SEQREQUESTER_INCLUDE_H
 
@@ -43,13 +59,12 @@ using namespace std;
 
 #undef  SEQREQUESTER_INCLUDE_H
 
-
-void doSummarize     (vector<char *> &inputs, summarizeParameters       &sumPar);
-void doExtract       (vector<char *> &inputs, extractParameters         &extPar);
-void doGenerate      (                        generateParameters        &genPar);
-void doSimulate      (vector<char *> &inputs, simulateParameters        &simPar);
-void doPartition     (vector<char *> &inputs, partitionParameters       &parPar);
-void doSample        (vector<char *> &inputs, sampleParameters          &samPar);
-void doShiftRegister (                        shiftRegisterParameters   &srPar);
-void doMicroSatellite(vector<char *> &inputs, microsatelliteParameters  &msPar);
-void doMutate        (vector<char *> &inputs, mutateParameters          &mutPar);
+void doSummarize     (vector<char const *> &inputs, summarizeParameters       &sumPar);
+void doExtract       (vector<char const *> &inputs, extractParameters         &extPar);
+void doGenerate      (                              generateParameters        &genPar);
+void doSimulate      (vector<char const *> &inputs, simulateParameters        &simPar);
+void doPartition     (vector<char const *> &inputs, partitionParameters       &parPar);
+void doSample        (vector<char const *> &inputs, sampleParameters          &samPar);
+void doShiftRegister (                              shiftRegisterParameters   &srPar);
+void doMicroSatellite(vector<char const *> &inputs, microsatelliteParameters  &msPar);
+void doMutate        (vector<char const *> &inputs, mutateParameters          &mutPar);

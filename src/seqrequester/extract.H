@@ -24,52 +24,55 @@
 
 class extractParameters {
 public:
-  extractParameters();
-  ~extractParameters();
+  extractParameters() {}
+  ~extractParameters() {}
 
-  void      finalize(void);
+  bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
+  void      showUsage(opMode mode);
+
+  bool      checkOptions(opMode mode, std::vector<char const *> &inputs, std::vector<char const *> &errors);
 
 private:
   void      loadNames(void);
 
 public:
-  vector<char const *>  baseArgs;               //  Base ranges to print
-  vector<uint64>        baseBgn;                //
-  vector<uint64>        baseEnd;                //
+  std::vector<char const *>  baseArgs;               //  Base ranges to print
+  std::vector<uint64>        baseBgn;                //
+  std::vector<uint64>        baseEnd;                //
 
-  vector<char const *>  seqsArgs;               //  Sequence ranges to print
-  vector<uint64>        seqsBgn;                //
-  vector<uint64>        seqsEnd;                //
-  stringList            seqsName;               //
+  std::vector<char const *>  seqsArgs;               //  Sequence ranges to print
+  std::vector<uint64>        seqsBgn;                //
+  std::vector<uint64>        seqsEnd;                //
+  stringList                 seqsName;               //
 
-  vector<char const *>  lensArgs;
-  vector<uint64>        lensMin;                //  Length ranges to print
-  vector<uint64>        lensMax;                //
+  std::vector<char const *>  lensArgs;
+  std::vector<uint64>        lensMin;                //  Length ranges to print
+  std::vector<uint64>        lensMax;                //
 
-  bool                  asReverse    = false;
-  bool                  asComplement = false;
+  bool                       asReverse    = false;
+  bool                       asComplement = false;
 
-  bool                  asUpperCase  = false;
-  bool                  asLowerCase  = false;
+  bool                       asUpperCase  = false;
+  bool                       asLowerCase  = false;
 
-  bool                  asCompressed = false;
+  bool                       asCompressed = false;
 
-  bool                  doMasking    = false;   //  Mask out any base not in baseBgn/baseEnd with 'N'
+  bool                       doMasking    = false;   //  Mask out any base not in baseBgn/baseEnd with 'N'
 
-  bool                  maskWithN    = true;    //  Mask with lowercase sequence instead of 'N'
+  bool                       maskWithN    = true;    //  Mask with lowercase sequence instead of 'N'
 
-  bool                  outputFASTA  = false;
-  bool                  outputFASTQ  = false;
-  uint8                 outputQV     = 20;
+  bool                       outputFASTA  = false;
+  bool                       outputFASTQ  = false;
+  uint8                      outputQV     = 20;
 
   //  Data for doing the extraction.
 
-  char                  C[256] = {0};   //  Complement a base
-  char                  U[256] = {0};   //  Uppercase a base
-  char                  L[256] = {0};   //  Lowercase a base
+  char                       C[256] = {0};   //  Complement a base
+  char                       U[256] = {0};   //  Uppercase a base
+  char                       L[256] = {0};   //  Lowercase a base
 
-  uint64                outputBasesLen  = 0;
-  uint64                outputBasesMax  = 0;        //1048576;
-  char                 *outputBases     = nullptr;  //new char [outputBasesMax];
-  uint8                *outputQuals     = nullptr;  //new char [outputBasesMax];
+  uint64                     outputBasesLen  = 0;
+  uint64                     outputBasesMax  = 0;        //1048576;
+  char                      *outputBases     = nullptr;  //new char [outputBasesMax];
+  uint8                     *outputQuals     = nullptr;  //new char [outputBasesMax];
 };

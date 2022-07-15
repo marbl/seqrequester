@@ -42,16 +42,19 @@ public:
   ~shiftRegisterParameters() {
   };
 
-  void    initialize(void);
+  bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
+  void      showUsage(opMode mode);
 
-  uint64   getEncodedSR(void);
-  uint64   getCycleLen(void);
-  uint64   getCycleMax(void);
-  uint64   getEncodedSVmin(void);
-  uint64   getEncodedSVmax(void);
-  uint64   getEncodedSVmask(void);
+  bool      checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors);
 
-  char     numberToBase(uint32 number) {
+  uint64    getEncodedSR(void);
+  uint64    getCycleLen(void);
+  uint64    getCycleMax(void);
+  uint64    getEncodedSVmin(void);
+  uint64    getEncodedSVmax(void);
+  uint64    getEncodedSVmask(void);
+
+  char      numberToBase(uint32 number) {
     number = (number << 1) + 'A';
 
     if (number == 'E')

@@ -19,12 +19,133 @@
 
 #include "seqrequester.H"
 
-#include "arrays.H"
-#include "sequence.H"
+bool
+simulateParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
 
-#include <vector>
+  if (strcmp(argv[arg], "simulate") == 0) {
+    mode = modeSimulate;
+  }
 
-using namespace std;
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-genomesize") == 0)) {
+    genomeSize = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-coverage") == 0)) {
+    desiredCoverage = strtodouble(argv[++arg]);
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-nreads") == 0)) {
+    desiredNumReads = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-nbases") == 0)) {
+    desiredNumBases = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-circular") == 0)) {
+    circular = true;
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-truncate") == 0)) {
+    truncate = true;
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-genome") == 0)) {
+    genomeName = argv[++arg];
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-distribution") == 0)) {
+    distribName = argv[++arg];
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-length") == 0)) {
+    decodeRange(argv[++arg], desiredMinLength, desiredMaxLength);
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-reverse") == 0)) {
+    rcProb = strtodouble(argv[++arg]);
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-seed") == 0)) {
+    mt.mtSetSeed(strtouint32(argv[++arg]));
+  }
+
+  else if ((mode == modeSimulate) && (strcmp(argv[arg], "-test") == 0)) {
+    test = true;
+  }
+
+  else {
+    return(false);
+  }
+
+  return(true);
+}
+
+
+
+void
+simulateParameters::showUsage(opMode mode) {
+
+  if (mode != modeSimulate)
+    return;
+
+  fprintf(stderr, "OPTIONS for simulate mode:\n");
+  fprintf(stderr, "  -genome G           sample reads from these sequences\n");
+  fprintf(stderr, "  -circular           treat the sequences in G as circular\n");
+  fprintf(stderr, "  -truncate           sample uniformly, at expense of read length\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -genomesize g       genome size to use for deciding coverage below\n");
+  fprintf(stderr, "  -coverage c         generate approximately c coverage of output\n");
+  fprintf(stderr, "  -nreads n           generate exactly n reads of output\n");
+  fprintf(stderr, "  -nbases n           generate approximately n bases of output\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -distribution F     generate read length by sampling the distribution in file F\n");
+  fprintf(stderr, "                        one column  - each line is the length of a sequence\n");
+  fprintf(stderr, "                        two columns - each line has the 'length' and 'number of sequences'\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "                      if file F doesn't exist, use a built-in distribution\n");
+  fprintf(stderr, "                        ultra-long-nanopore\n");
+  fprintf(stderr, "                        pacbio\n");
+  fprintf(stderr, "                        pacbio-hifi\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -length min[-max]   generate read length uniformly from range min-max\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -reverse p          output a reverse-complement read with probability p\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -test               generate a read at every possible start position\n");
+  fprintf(stderr, "\n");
+}
+
+
+
+bool
+simulateParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+
+  if (mode != modeSimulate)
+    return(false);
+
+  if ((genomeName == nullptr) ||
+      (genomeName[0] == 0))
+    sprintf(errors, "ERROR:  No reference genome sequence (-genome) supplied.\n");
+
+  //  Load any read length distribution.
+
+  if ((distribName == nullptr) ||
+      (distribName[0] == 0)) {
+    char const *path = findSharedFile("share/sequence", distribName);
+
+    if ((path == nullptr) ||
+        (fileExists(path) == false)) {
+      sprintf(errors, "ERROR: File '%s' doesn't exist, and not in any data directory I know about.\n", distribName);
+      return(true);
+    }
+
+    dist.loadDistribution(path);
+  }
+
+  return(errors.size() > 0);
+}
+
 
 
 class simRead {
@@ -59,33 +180,6 @@ public:
   uint64   seqMax = 1024;
   char    *seq    = new char [seqMax];
 };
-
-
-
-void
-simulateParameters::finalize() {
-
-  if (distribName[0]) {
-    char const *path = findSharedFile("share/sequence", distribName);
-
-    if (path == NULL) {
-      fprintf(stderr, "ERROR: File '%s' doesn't exist, and not in any data directory I know about.\n", distribName);
-      exit(1);
-    }
-
-    //  If the path is a file -- which it should be -- load it.  Else, fail.
-
-    if (fileExists(path) == true) {
-      fprintf(stderr, "load '%s'\n", path);
-      dist.loadDistribution(path);
-    }
-
-    else {
-      fprintf(stderr, "ERROR: File '%s' doesn't exist, and not in any data directory I know about.\n", distribName);
-      exit(1);
-    }
-  }
-}
 
 
 
@@ -429,8 +523,8 @@ doSimulate_test(simulateParameters &simPar,
 
 
 void
-doSimulate(vector<char *>     &inputs,
-           simulateParameters &simPar) {
+doSimulate(vector<char const *> &inputs,
+           simulateParameters   &simPar) {
 
   //  Decide how many reads or bases to make.
 
@@ -445,9 +539,6 @@ doSimulate(vector<char *>     &inputs,
 
   if (simPar.desiredNumBases > 0)
     nBasesMax = simPar.desiredNumBases;
-
-  if (simPar.randomSeedValid)
-    simPar.mt.mtSetSeed(simPar.randomSeed);
 
   //  Fail?
 

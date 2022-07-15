@@ -18,15 +18,126 @@
  */
 
 #include "seqrequester.H"
-#include "sequence.H"
-#include "mt19937ar.H"
+
+bool
+sampleParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
+
+  if (strcmp(argv[arg], "sample") == 0) {
+    mode = modeSample;
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-paired") == 0)) {
+    isPaired = true;
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-copies") == 0)) {
+    numCopies = strtouint32(argv[++arg]);
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-output") == 0)) {
+    //strncpy(output1, argv[++arg], FILENAME_MAX);  //  #'s in the name will be replaced
+    //strncpy(output2, argv[  arg], FILENAME_MAX);  //  by '1' or '2' later.
+    output1 = argv[++arg];
+    output2 = argv[  arg];
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-fasta") == 0)) {
+    outputFASTA = true;
+  }
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-fastq") == 0)) {
+    outputFASTQ = true;
+
+    if ((arg+1 < argc) && ('0' <= argv[arg+1][0]) && (argv[arg+1][0] <= '9'))
+      outputQV = strtouint32(argv[++arg]);
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-coverage") == 0)) {      //  Sample reads up to some coverage C
+    desiredCoverage = strtodouble(argv[++arg]);
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-genomesize") == 0)) {
+    genomeSize = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-bases") == 0)) {         //  Sample B bases
+    desiredNumBases = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-reads") == 0)) {         //  Sample N reads
+    desiredNumReads = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-pairs") == 0)) {         //  Sample N pairs of reads
+    desiredNumReads = strtouint64(argv[++arg]) * 2;
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-fraction") == 0)) {      //  Sample F fraction
+    desiredFraction = strtodouble(argv[++arg]);
+  }
+
+  else if ((mode == modeSample) && (strcmp(argv[arg], "-seed") == 0)) {          //  Seed for pseudo random number generator
+    mt.mtSetSeed(strtouint32(argv[++arg]));
+  }
+
+  else {
+    return(false);
+  }
+
+  return(true);
+}
+
+
+
+void
+sampleParameters::showUsage(opMode mode) {
+
+  if (mode != modeSample)
+    return;
+
+  fprintf(stderr, "OPTIONS for sample mode:\n");
+  fprintf(stderr, "  -paired             treat inputs as paired sequences; the first two files form the\n");
+  fprintf(stderr, "                      first pair, and so on.\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -copies C           write C different copies of the sampling (without replacement).\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -output O           write output sequences to file O.  If paired, two files must be supplied.\n");
+  fprintf(stderr, "  -fasta              write output as FASTA\n");
+  fprintf(stderr, "  -fastq [q]          write output as FASTQ; if no quality values, use q (integer, 0-based) for all\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -coverage C         output C coverage of sequences, based on genome size G.\n");
+  fprintf(stderr, "  -genomesize G       \n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -bases B            output B bases.\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -reads R            output R reads.\n");
+  fprintf(stderr, "  -pairs P            output P pairs (only if -paired).\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -fraction F         output fraction F of the input bases.\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -seed s        seed the pseudo-random number generate with integer 's'\n");
+  fprintf(stderr, "\n");
+}
+
+
+
+bool
+sampleParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+
+  if (mode != modeSample)
+    return(false);
+
+  if (inputs.size() == 0)
+    sprintf(errors, "ERROR:  No input sequence files supplied.\n");
+
+  return(errors.size() > 0);
+}
 
 
 
 class seqEntry {
 public:
-  seqEntry(mtRandom &MT, uint64 pos_, uint32 len_) {
-    rnd = MT.mtRandomRealOpen();
+  seqEntry(mtRandom &mt, uint64 pos_, uint32 len_) {
+    rnd = mt.mtRandomRealOpen();
     pos = pos_;
     len = len_;
     out = UINT32_MAX;
@@ -165,9 +276,7 @@ doSample_sample(sampleParameters &samPar,
 
 
 void
-doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
-
-  samPar.initialize();
+doSample_paired(vector<char const *> &inputs, sampleParameters &samPar) {
 
   vector<uint64>    numSeqsPerFile;
   vector<seqEntry>  seqOrder;
@@ -178,8 +287,6 @@ doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
   vector<char *>    names;
   vector<char *>    sequences;
   vector<char *>    qualities;
-
-  mtRandom          MT;
 
   //  No support for multiple copies.
 
@@ -195,16 +302,16 @@ doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
     char  *a = strrchr(samPar.output1, '#');
     char  *b = strrchr(samPar.output2, '#');
 
-    if (a == NULL)
+    if (a == nullptr)
       fprintf(stderr, "ERROR: Failed to find '#' in output name '%s'\n", samPar.output1), exit(1);
-    if (b == NULL)
+    if (b == nullptr)
       fprintf(stderr, "ERROR: Failed to find '#' in output name '%s'\n", samPar.output2), exit(1);
 
     *a = '1';
     *b = '2';
 
-    outFile1 = new compressedFileWriter(samPar.output1);
-    outFile2 = new compressedFileWriter(samPar.output2);
+    outFile1 = new compressedFileWriter(samPar.output1, 9);
+    outFile2 = new compressedFileWriter(samPar.output2, 9);
   }
 
   //  Scan the inputs, saving the number of sequences in each and the length of each sequence.
@@ -222,7 +329,7 @@ doSample_paired(vector<char *> &inputs, sampleParameters &samPar) {
 
     while ((sf1more == true) &&
            (sf2more == true)) {
-      seqOrder.push_back(seqEntry(MT, numSeqsTotal, seq1.length() + seq2.length()));
+      seqOrder.push_back(seqEntry(samPar.mt, numSeqsTotal, seq1.length() + seq2.length()));
 
       numSeqsTotal  += 1;
       numBasesTotal += seq1.length() + seq2.length();
@@ -293,7 +400,7 @@ doSample_single_openOutput(sampleParameters &samPar, uint32 ii) {
     fprintf(stderr, "ERROR: Failed to find '#' in output name '%s', and asked to make multiple copies.\n", samPar.output1), exit(1);
 
   if  (samPar.output1[ap] == 0)
-    return(new compressedFileWriter(samPar.output1));
+    return(new compressedFileWriter(samPar.output1, 9));
 
   //  We've got #'s in the string.  We want to replace the last block of 'em
   //  with digits (ap found above is the start of the first block, sigh).
@@ -338,16 +445,13 @@ doSample_single_openOutput(sampleParameters &samPar, uint32 ii) {
       name[ii] = digs[7 - dp--];
   }
 
-  return(new compressedFileWriter(name));
+  return(new compressedFileWriter(name, 9));
 }
 
 
 
 void
-doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
-
-  samPar.initialize();
-
+doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
   vector<uint64>    numSeqsPerFile;
   vector<seqEntry>  seqOrder;
 
@@ -357,11 +461,6 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
   vector<char *>    names;
   vector<char *>    sequences;
   vector<char *>    qualities;
-
-  mtRandom          MT;
-
-  if (samPar.randomSeedValid)
-    MT.mtSetSeed(samPar.randomSeed);
 
   //  Open output files. If paired, replace #'s in the output names with 1 or 2.
 
@@ -383,7 +482,7 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
     uint64       num = 0;
 
     while (sf1->loadSequence(seq1)) {
-      seqOrder.push_back(seqEntry(MT, numSeqsTotal, seq1.length()));
+      seqOrder.push_back(seqEntry(samPar.mt, numSeqsTotal, seq1.length()));
 
       numSeqsTotal  += 1;
       numBasesTotal += seq1.length();
@@ -446,7 +545,7 @@ doSample_single(vector<char *> &inputs, sampleParameters &samPar) {
 
 
 void
-doSample(vector<char *> &inputs, sampleParameters &samPar) {
+doSample(vector<char const *> &inputs, sampleParameters &samPar) {
 
   if (samPar.isPaired == false)
     doSample_single(inputs, samPar);

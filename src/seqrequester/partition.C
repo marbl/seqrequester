@@ -18,8 +18,115 @@
  */
 
 #include "seqrequester.H"
-#include "sequence.H"
-#include "mt19937ar.H"
+
+bool
+partitionParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
+
+  if (strcmp(argv[arg], "partition") == 0) {
+    mode = modePartition;
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-paired") == 0)) {
+    isPaired = true;
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-output") == 0)) {
+    strncpy(output1, argv[++arg], FILENAME_MAX);  //  #'s in the name will be replaced
+    strncpy(output2, argv[  arg], FILENAME_MAX);  //  by '1' or '2' later.
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-writers") == 0)) {
+    numWriters = strtouint32(argv[++arg]);
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-fasta") == 0)) {
+    outputFASTA = true;
+  }
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-fastq") == 0)) {
+    outputFASTQ = true;
+
+    if ((arg+1 < argc) && ('0' <= argv[arg+1][0]) && (argv[arg+1][0] <= '9'))
+      outputQV = strtouint32(argv[++arg]);
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-coverage") == 0)) {      //  Sample reads up to some coverage C
+    desiredCoverage = strtodouble(argv[++arg]);
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-genomesize") == 0)) {
+    genomeSize = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-bases") == 0)) {         //  Sample B bases
+    desiredNumBases = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-reads") == 0)) {         //  Sample N reads
+    desiredNumReads = strtouint64(argv[++arg]);
+  }
+
+  else if ((mode == modePartition) && (strcmp(argv[arg], "-pairs") == 0)) {         //  Sample N pairs of reads
+    desiredNumReads = strtouint64(argv[++arg]) * 2;
+  }
+
+  else {
+    return(false);
+  }
+
+  return(true);
+}
+
+
+
+void
+partitionParameters::showUsage(opMode mode) {
+
+  if (mode != modePartition)
+    return;
+
+  fprintf(stderr, "OPTIONS for partition mode:\n");
+  fprintf(stderr, "  -paired             treat inputs as paired sequences; the first two files form the\n");
+  fprintf(stderr, "                      first pair, and so on.\n");
+  fprintf(stderr, "                         NOT IMPLEMENTED\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -output O           write output sequences to file O.  If paired, two files must be supplied.\n");
+  fprintf(stderr, "  -fasta              write output as FASTA\n");
+  fprintf(stderr, "  -fastq [q]          write output as FASTQ; if no quality values, use q (integer, 0-based) for all\n");
+  fprintf(stderr, "  -writers N          use N threads for writing (compressed) output.  The last N files will\n");
+  fprintf(stderr, "                      be smaller than requested.\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -coverage C         output C coverage of sequences, based on genome size G.\n");
+  fprintf(stderr, "  -genomesize G       \n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -bases B            output B bases.\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -reads R            output R reads.\n");
+  fprintf(stderr, "  -pairs P            output P pairs (only if -paired).\n");
+  fprintf(stderr, "\n");
+}
+
+
+
+bool
+partitionParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+
+  if (mode != modePartition)
+    return(false);
+
+  if (inputs.size() == 0)
+    sprintf(errors, "ERROR:  No input sequence files supplied.\n");
+
+  if ((output1[0] == 0) &&
+      (output2[0] == 0))
+    sprintf(errors, "ERROR:  No output pattern (-output) supplied.\n");
+
+  if ((desiredCoverage == 0) &&
+      (desiredNumReads == 0) &&
+      (desiredNumBases == 0))
+    sprintf(errors, "ERROR:  No partitioning size (-coverage, -bases, -reads) supplied.\n");
+
+  return(errors.size() > 0);
+}
 
 
 
@@ -38,7 +145,7 @@ openOutput(char const *pattern, uint32 index) {
     fprintf(stderr, "ERROR: Failed to find '#' in output pattern '%s', and asked to make multiple outputs.\n", pattern), exit(1);
 
   if  (pattern[ap] == 0)
-    return(new compressedFileWriter(pattern));
+    return(new compressedFileWriter(pattern, 9));
 
   //  We've got #'s in the string.  We want to replace the last block of 'em
   //  with digits (ap found above is the start of the first block, sigh).
@@ -83,7 +190,7 @@ openOutput(char const *pattern, uint32 index) {
       name[ii] = digs[7 - dp--];
   }
 
-  return(new compressedFileWriter(name));
+  return(new compressedFileWriter(name, 9));
 }
 
 
@@ -91,9 +198,7 @@ openOutput(char const *pattern, uint32 index) {
 
 
 void
-doPartition_single(vector<char *> &inputs, partitionParameters &parPar) {
-
-  parPar.initialize();
+doPartition_single(vector<char const *> &inputs, partitionParameters &parPar) {
 
   //  Figure out how many bases/sequences to write in each output file.
   //
@@ -185,7 +290,7 @@ doPartition_single(vector<char *> &inputs, partitionParameters &parPar) {
 
 
 void
-doPartition(vector<char *> &inputs, partitionParameters &parPar) {
+doPartition(vector<char const *> &inputs, partitionParameters &parPar) {
 
   if (parPar.isPaired == false)
     doPartition_single(inputs, parPar);

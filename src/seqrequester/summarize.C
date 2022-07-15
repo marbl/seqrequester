@@ -19,8 +19,85 @@
 
 #include "seqrequester.H"
 
-#include "arrays.H"
-#include "sequence.H"
+bool
+summarizeParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
+
+  if      (strcmp(argv[arg], "summarize") == 0) {
+    mode = modeSummarize;
+  }
+
+  else if ((mode == modeSummarize) && (strcmp(argv[arg], "-size") == 0)) {
+    genomeSize = strtoull(argv[++arg], nullptr, 10);
+  }
+
+  else if ((mode == modeSummarize) && (strcmp(argv[arg], "-1x") == 0)) {
+    limitTo1x = true;
+  }
+
+  else if ((mode == modeSummarize) && (strcmp(argv[arg], "-split-n") == 0)) {
+    breakAtN = true;
+  }
+
+  else if ((mode == modeSummarize) && (strcmp(argv[arg], "-simple") == 0)) {
+    asSimple = true;
+  }
+
+  else if ((mode == modeSummarize) && (strcmp(argv[arg], "-lengths") == 0)) {
+    asLength = true;
+  }
+
+  else if ((mode == modeSummarize) && (strcmp(argv[arg], "-assequences") == 0)) {
+    asSequences = true;
+    asBases     = false;
+  }
+
+  else if ((mode == modeSummarize) && (strcmp(argv[arg], "-asbases") == 0)) {
+    asSequences = false;
+    asBases     = true;
+  }
+
+  else {
+    return(false);
+  }
+
+  return(true);
+}
+
+
+
+void
+summarizeParameters::showUsage(opMode mode) {
+
+  if (mode != modeSummarize)
+    return;
+
+  fprintf(stderr, "OPTIONS for summarize mode:\n");
+  fprintf(stderr, "  -size          base size to use for N50 statistics\n");
+  fprintf(stderr, "  -1x            limit NG table to 1x coverage\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -split-n       split sequences at N bases before computing length\n");
+  fprintf(stderr, "  -simple        output a simple 'length numSequences' histogram\n");
+  fprintf(stderr, "  -lengths       output a list of the sequence lengths\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -assequences   load data as complete sequences (for testing)\n");
+  fprintf(stderr, "  -asbases       load data as blocks of bases    (for testing)\n");
+  fprintf(stderr, "\n");
+}
+
+
+
+bool
+summarizeParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+
+  if (mode != modeSummarize)
+    return(false);
+
+  if (inputs.size() == 0)
+    sprintf(errors, "ERROR:  No input sequence files supplied.\n");
+
+  return(errors.size() > 0);
+}
+
 
 
 bool
@@ -323,7 +400,7 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
                     }
                   };
 
-  uint64  ns = 0;
+  uint64  ns = 1;   //  Sequences start at 1, not zero!
 
   for (uint64 ii=0; ii<longLengths.size(); ii++, ns++)
     emitLine(longLengths[ii], ns);
@@ -332,6 +409,7 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
     for (uint64 cc=0; cc<shortLengths[ll]; cc++, ns++)
       emitLine(ll, ns);
 
+  assert(ns-1 == nSeqs);
 
   //  If we're displaying exactly 1x, write empty lines to get to there.
 
@@ -376,7 +454,7 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
 
 
 void
-doSummarize(vector<char *>       &inputs,
+doSummarize(vector<char const *> &inputs,
             summarizeParameters  &sumPar) {
   uint32          shortLengthsLen = 1048576;
   uint64         *shortLengths    = new uint64 [shortLengthsLen];
@@ -396,10 +474,10 @@ doSummarize(vector<char *>       &inputs,
   double          ntn = 0;
 
   uint32          nameMax = 0;
-  char           *name    = NULL;
+  char           *name    = nullptr;
   uint64          seqMax  = 0;
-  char           *seq     = NULL;
-  uint8          *qlt     = NULL;
+  char           *seq     = nullptr;
+  uint8          *qlt     = nullptr;
   uint64          seqLen  = 0;
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {

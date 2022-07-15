@@ -26,20 +26,15 @@
 
 class simulateParameters {
 public:
-  simulateParameters() {
-  }
+  simulateParameters() {}
+  ~simulateParameters() {}
 
-  ~simulateParameters() {
-  }
+  bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
+  void      showUsage(opMode mode);
 
+  bool      checkOptions(opMode mode, std::vector<char const *> &inputs, std::vector<char const *> &errors);
 
-  void      initialize(void) {
-  };
-
-
-  void      finalize(void);
-
-
+public:
   uint64  genomeSize         = 0;
   bool    circular           = false;
   bool    truncate           = false;
@@ -55,13 +50,9 @@ public:
 
   double  rcProb             = 0.5;
 
-  bool    randomSeedValid    = false;
-  uint32  randomSeed         = 0;
-
   mtRandom             mt;
   sampledDistribution  dist;
 
-  char    genomeName[FILENAME_MAX+1]  = { 0 };
-  char    distribName[FILENAME_MAX+1] = { 0 };
-  char    outputName[FILENAME_MAX+1]  = { 0 };
+  char const    *genomeName  = nullptr;
+  char const    *distribName = nullptr;
 };
