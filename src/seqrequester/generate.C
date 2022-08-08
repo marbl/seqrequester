@@ -50,7 +50,7 @@ generateParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **arg
     mt.mtSetSeed(strtouint32(argv[++arg]));
   }
 
-  else if ((mode == modeGenerate) && (strcmp(argv[arg], "-guassian") == 0)) {
+  else if ((mode == modeGenerate) && (strcmp(argv[arg], "-gaussian") == 0)) {
     useGaussian = true;
   }
 
