@@ -159,49 +159,36 @@ bool seqOrderNormal(const seqEntry &a, const seqEntry &b) {
 
 static
 void
-doSample_sample_logNumReads(sampleParameters &samPar) {
+doSample_logInto(sampleParameters &samPar) {
+  char into[64];
+  char emit[99];
+
+
   if (samPar.numCopies == 1)
-    fprintf(stderr, "Emitting " F_U64 " reads.\n",
-            samPar.desiredNumReads);
+    snprintf(into, 64, " into one output file");
   else
-    fprintf(stderr, "Emitting " F_U64 " reads into each of %u copies.\n",
-            samPar.desiredNumReads, samPar.numCopies);
-}
+    snprintf(into, 64, " into each of %u output files", samPar.numCopies);
 
 
-static
-void
-doSample_sample_logCoverage(sampleParameters &samPar) {
-  if (samPar.numCopies == 1)
-    fprintf(stderr, "Emitting %.3fx coverage; " F_U64 " bases.\n",
-            samPar.desiredCoverage, samPar.desiredNumBases);
-  else
-    fprintf(stderr, "Emitting %.3fx coverage; " F_U64 " bases into each of %u copies.\n",
-            samPar.desiredCoverage, samPar.desiredNumBases, samPar.numCopies);
-}
+  if       (samPar.desiredNumReads > 0)
+    snprintf(emit, 99, "%lu read%s", samPar.desiredNumReads, samPar.desiredNumReads == 1 ? "" : "s");
+
+  else if ((samPar.desiredNumBases > 0) && (samPar.desiredCoverage > 0))
+    snprintf(emit, 99, "%.3fx coverage (%lu base%s)", samPar.desiredCoverage, samPar.desiredNumBases, samPar.desiredNumBases == 1 ? "" : "s");
+
+  else if ((samPar.desiredNumBases > 0) && (samPar.desiredFraction > 0))
+    snprintf(emit, 99, "%.4f fraction (%lu base%s)", samPar.desiredFraction, samPar.desiredNumBases, samPar.desiredNumBases == 1 ? "" : "s");
+
+  else if  (samPar.desiredNumBases > 0)
+    snprintf(emit, 99, "%lu base%s", samPar.desiredNumBases, samPar.desiredNumBases == 1 ? "" : "s");
+
+  else {
+    strcpy(into, "");
+    strcpy(emit, "nothing");
+  }
 
 
-static
-void
-doSample_sample_logNumBases(sampleParameters &samPar) {
-  if (samPar.numCopies == 1)
-    fprintf(stderr, "Emitting " F_U64 " bases.\n",
-            samPar.desiredNumBases);
-  else
-    fprintf(stderr, "Emitting " F_U64 " bases into each of %u copies.\n",
-            samPar.desiredNumBases, samPar.numCopies);
-}
-
-
-static
-void
-doSample_sample_logFraction(sampleParameters &samPar) {
-  if (samPar.numCopies == 1)
-    fprintf(stderr, "Emitting %.4f fraction of the reads.\n",
-            samPar.desiredFraction);
-  else
-    fprintf(stderr, "Emitting %.4f fraction of the reads into each of %u copies.\n",
-            samPar.desiredFraction, samPar.numCopies);
+  fprintf(stderr, "  %s%s.\n", emit, into);
 }
 
 
@@ -210,10 +197,6 @@ doSample_sample(sampleParameters &samPar,
                 uint64            numSeqsTotal,
                 uint64            numBasesTotal,
                 vector<seqEntry> &seqOrder) {
-
-  //  Randomize the sequences.
-
-  sort(seqOrder.begin(), seqOrder.end(), seqOrderRandom);
 
   //  Do some math to figure out what sequences to report.
 
@@ -225,6 +208,12 @@ doSample_sample(sampleParameters &samPar,
     samPar.desiredNumBases = (uint64)ceil(samPar.desiredFraction * numBasesTotal);
   }
 
+  //  Randomize the sequences.
+
+  sort(seqOrder.begin(), seqOrder.end(), seqOrderRandom);
+
+  doSample_logInto(samPar);
+
   //  Scan the randomized reads, assigning each to an output file,
   //  and moving to the next file when the current one is too big.
 
@@ -234,27 +223,18 @@ doSample_sample(sampleParameters &samPar,
   uint32  of = 0;
 
   if (samPar.desiredNumReads > 0) {
-    doSample_sample_logNumReads(samPar);
-
     for (uint64 ii=0; ii<numSeqsTotal; ii++) {
-      if (of < samPar.desiredNumReads) {
+      if (nr < samPar.desiredNumReads) {
         nr++;
         seqOrder[ii].out = of;
       } else {
-        nr = 0;
+        nr = 1;
         seqOrder[ii].out = ++of;
       }
     }
   }
 
   if (samPar.desiredNumBases > 0) {
-    if (samPar.desiredCoverage > 0)
-      doSample_sample_logCoverage(samPar);
-    else if (samPar.desiredFraction > 0)
-      doSample_sample_logFraction(samPar);
-    else
-      doSample_sample_logNumBases(samPar);
-
     for (uint64 nbe=0, ii=0; ii<numSeqsTotal; ii++) {
       if (nbe < samPar.desiredNumBases) {
         nbe += seqOrder[ii].len;
@@ -269,6 +249,15 @@ doSample_sample(sampleParameters &samPar,
   //  Unrandomize the sequences.
 
   sort(seqOrder.begin(), seqOrder.end(), seqOrderNormal);
+
+  //  Warn if we ran out of input.
+
+  if (of <= samPar.numCopies) {
+    fprintf(stderr, "\n");
+    fprintf(stderr, "WARNING:\n");
+    fprintf(stderr, "WARNING: ran out of input before all output files filled.\n");
+    fprintf(stderr, "WARNING:\n");
+  }
 }
 
 
@@ -397,8 +386,10 @@ doSample_single_openOutput(sampleParameters &samPar, uint32 ii) {
   if ((samPar.output1[ap] == 0) && (samPar.numCopies > 1))
     fprintf(stderr, "ERROR: Failed to find '#' in output name '%s', and asked to make multiple copies.\n", samPar.output1), exit(1);
 
-  if  (samPar.output1[ap] == 0)
+  if  (samPar.output1[ap] == 0) {
+    fprintf(stderr, "  %s\n", samPar.output1);
     return(new compressedFileWriter(samPar.output1, 9));
+  }
 
   //  We've got #'s in the string.  We want to replace the last block of 'em
   //  with digits (ap found above is the start of the first block, sigh).
@@ -443,6 +434,7 @@ doSample_single_openOutput(sampleParameters &samPar, uint32 ii) {
       name[ii] = digs[7 - dp--];
   }
 
+  fprintf(stderr, "  %s\n", name);
   return(new compressedFileWriter(name, 9));
 }
 
@@ -471,6 +463,7 @@ doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
 
   //  Scan the inputs, saving the number of sequences in each and the length of each sequence.
 
+  fprintf(stderr, "\n");
   fprintf(stderr, "Scanning %lu input file%s.\n", inputs.size(), (inputs.size() == 1) ? "" : "s");
 
   dnaSeq   seq1;
@@ -488,10 +481,10 @@ doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
       num += 1;
 
       if ((num % 61075) == 0)
-        fprintf(stderr, "  %10lu sequences in '%s'\r", num, inputs[ff]);
+        fprintf(stderr, "  scanned %10lu sequences in '%s'\r", num, inputs[ff]);
     }
 
-    fprintf(stderr, "  %10lu sequences in '%s'\n", num, inputs[ff]);
+    fprintf(stderr, "  scanned %10lu sequences in '%s'\n", num, inputs[ff]);
 
     numSeqsPerFile.push_back(num);
 
@@ -500,12 +493,14 @@ doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
 
   //  Figure out what to output.
 
+  fprintf(stderr, "\n");
   fprintf(stderr, "Randomizing.\n");
 
   doSample_sample(samPar, numSeqsTotal, numBasesTotal, seqOrder);
 
   //  Scan the inputs again, this time emitting sequences if their saved length isn't zero.
 
+  fprintf(stderr, "\n");
   fprintf(stderr, "Writing outputs.\n");
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
@@ -524,19 +519,21 @@ doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
                        samPar.outputQV);
 
       if ((++num % 61075) == 0)
-        fprintf(stderr, "  %10lu sequences in '%s'\r", num, inputs[ff]);
+        fprintf(stderr, "  wrote %10lu sequences from '%s'\r", num, inputs[ff]);
     }
 
-    fprintf(stderr, "  %10lu sequences in '%s'\n", num, inputs[ff]);
+    fprintf(stderr, "  wrote %10lu sequences from '%s'\n", num, inputs[ff]);
 
     delete sf1;
   }
 
+  fprintf(stderr, "\n");
   fprintf(stderr, "Closing %u output file%s.\n", samPar.numCopies, (samPar.numCopies == 1) ? "" : "s");
 
   for (uint32 ii=0; ii<samPar.numCopies; ii++)
     delete outFiles[ii];
 
+  fprintf(stderr, "\n");
   fprintf(stderr, "Done.\n");
 }
 
