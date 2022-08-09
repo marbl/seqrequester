@@ -533,6 +533,8 @@ doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
   for (uint32 ii=0; ii<samPar.numCopies; ii++)
     delete outFiles[ii];
 
+  delete [] outFiles;
+
   fprintf(stderr, "\n");
   fprintf(stderr, "Done.\n");
 }

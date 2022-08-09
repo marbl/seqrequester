@@ -284,6 +284,10 @@ doPartition_single(vector<char const *> &inputs, partitionParameters &parPar) {
   for (uint32 ii=0; ii<parPar.numWriters; ii++)
     delete oFile[ii];
 
+  delete [] nBases;
+  delete [] nSeqs;
+  delete [] oFile;
+
   fprintf(stderr, "Done.\n");
 }
 
