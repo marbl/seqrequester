@@ -35,10 +35,8 @@ sampleParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv)
   }
 
   else if ((mode == modeSample) && (strcmp(argv[arg], "-output") == 0)) {
-    //strncpy(output1, argv[++arg], FILENAME_MAX);  //  #'s in the name will be replaced
-    //strncpy(output2, argv[  arg], FILENAME_MAX);  //  by '1' or '2' later.
-    output1 = argv[++arg];
-    output2 = argv[  arg];
+    output1 = duplicateString(argv[++arg]);   //  MUST be writable; #'s in the name will
+    output2 = duplicateString(argv[  arg]);   //  be replaced by '1' or '2' later.
   }
 
   else if ((mode == modeSample) && (strcmp(argv[arg], "-fasta") == 0)) {

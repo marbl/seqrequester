@@ -25,7 +25,10 @@
 class partitionParameters {
 public:
   partitionParameters() {}
-  ~partitionParameters() {}
+  ~partitionParameters() {
+    delete [] output1;
+    delete [] output2;
+  }
 
   bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
   void      showUsage(opMode mode);
@@ -51,7 +54,7 @@ public:
 
   uint32  numWriters       = 4;
 
-  char    output1[FILENAME_MAX+1] = {0};
-  char    output2[FILENAME_MAX+1] = {0};
+  char   *output1          = nullptr;
+  char   *output2          = nullptr;
 };
 

@@ -25,10 +25,11 @@
 class sampleParameters {
 public:
   sampleParameters() {
-    //output1 = new char [FILENAME_MAX+1];
-    //output2 = new char [FILENAME_MAX+1];
   }
-  ~sampleParameters() {}
+  ~sampleParameters() {
+    delete [] output1;
+    delete [] output2;
+  }
 
   bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
   void      showUsage(opMode mode);
@@ -54,6 +55,6 @@ public:
   bool      outputFASTQ = false;
   uint8     outputQV = 20;
 
-  char const *output1 = nullptr;//[FILENAME_MAX+1] = {0};
-  char const *output2 = nullptr;//[FILENAME_MAX+1] = {0};
+  char     *output1 = nullptr;
+  char     *output2 = nullptr;
 };

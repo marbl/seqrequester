@@ -31,8 +31,8 @@ partitionParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **ar
   }
 
   else if ((mode == modePartition) && (strcmp(argv[arg], "-output") == 0)) {
-    strncpy(output1, argv[++arg], FILENAME_MAX);  //  #'s in the name will be replaced
-    strncpy(output2, argv[  arg], FILENAME_MAX);  //  by '1' or '2' later.
+    output1 = duplicateString(argv[++arg]);   //  MUST be writable; #'s in the name will
+    output2 = duplicateString(argv[  arg]);   //  be replaced by a file number later.
   }
 
   else if ((mode == modePartition) && (strcmp(argv[arg], "-writers") == 0)) {
@@ -116,8 +116,8 @@ partitionParameters::checkOptions(opMode mode, vector<char const *> &inputs, vec
   if (inputs.size() == 0)
     sprintf(errors, "ERROR:  No input sequence files supplied.\n");
 
-  if ((output1[0] == 0) &&
-      (output2[0] == 0))
+  if (((output1 == nullptr) || (output1[0] == 0)) &&
+      ((output2 == nullptr) || (output2[0] == 0)))
     sprintf(errors, "ERROR:  No output pattern (-output) supplied.\n");
 
   if ((desiredCoverage == 0) &&
