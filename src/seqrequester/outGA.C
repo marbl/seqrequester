@@ -8,15 +8,15 @@ outGA(dnaSeqFile   *seqFile,
 
   // exact bed
   sprintf(outName, "%s.GA.bed", outPrefix);
-  FILE *fGA = AS_UTL_openOutputFile(outName);
+  FILE *fGA = merylutil::openOutputFile(outName);
   sprintf(outName, "%s.TC.bed", outPrefix);
-  FILE *fTC = AS_UTL_openOutputFile(outName);
+  FILE *fTC = merylutil::openOutputFile(outName);
 
   // per window count bed
   sprintf(outName, "%s.GA.%u.bed", outPrefix, window);
-  FILE *fGAw = AS_UTL_openOutputFile(outName);
+  FILE *fGAw = merylutil::openOutputFile(outName);
   sprintf(outName, "%s.TC.%u.bed", outPrefix, window);
-  FILE *fTCw = AS_UTL_openOutputFile(outName);
+  FILE *fTCw = merylutil::openOutputFile(outName);
 
   dnaSeq    seq;
 

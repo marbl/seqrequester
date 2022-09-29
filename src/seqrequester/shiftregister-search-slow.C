@@ -22,6 +22,8 @@
 #include "shiftregister-gf4.H"
 #include "bits.H"
 
+using merylutil::bitArray;
+
 char    srprint[65];
 char    svprint[65];
 

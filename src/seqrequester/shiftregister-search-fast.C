@@ -22,6 +22,8 @@
 #include "shiftregister-gf4.H"
 #include "bits.H"
 
+using merylutil::expandTo3;
+
 void
 searchShiftRegisterFast(shiftRegisterParameters &srPar) {
  //  Allocate space for the loop detector, set local variables.
@@ -78,7 +80,7 @@ searchShiftRegisterFast(shiftRegisterParameters &srPar) {
       uint64 svwr  = (sv & 0xaaaaaaaaaaaaaaaallu);   //  High order bits of each tap.
       uint64 svw   = (svwr >> 1) | (svwl);           //  One bit set for every positive tap.
 
-      uint32 w = countNumberOfSetBits64(svw);
+      uint32 w = merylutil::countNumberOfSetBits64(svw);
 
       if (w != srPar.weight) {
         //fprintf(stderr, "SKIP sv %0*lo\n", srPar.order, expandTo3(sv));

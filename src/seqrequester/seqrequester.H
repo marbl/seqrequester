@@ -17,20 +17,27 @@
  *  contains full conditions and disclaimers.
  */
 
-#include "runtime.H"
-
-#include "strings.H"
-#include "arrays.H"
-#include "files.H"
-
-#include "sequence.H"
-#include "mt19937ar.H"
-
 #include <vector>
 #include <set>
 #include <algorithm>
 
+#include "types.H"
+#include "strings.H"
+#include "arrays.H"
+#include "files.H"
+#include "math.H"
+#include "system.H"
+#include "sequence.H"
+
 using namespace std;
+
+using merylutil::stringList;
+
+using merylutil::mtRandom;
+using merylutil::sampledDistribution;
+
+using merylutil::dnaSeq;
+using merylutil::dnaSeqFile;
 
 enum opMode {
   modeSummarize,       //  Summarize sequences in FASTA or FASTQ inputs

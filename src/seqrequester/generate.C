@@ -203,7 +203,7 @@ doGenerate(generateParameters &genPar) {
 
 
   if (genPar.ident == nullptr)
-    genPar.ident = duplicateString("random%08lu");
+    genPar.ident = merylutil::duplicateString("random%08lu");
 
   while ((nSeqs  < genPar.nSeqs) &&
          (nBases < genPar.nBases)) {
@@ -215,7 +215,7 @@ doGenerate(generateParameters &genPar) {
     seqLen = (uint64)round(len);
 
     if (seqLen+1 >= seqMax)
-      resizeArrayPair(seq, qlt, 0, seqMax, seqLen+1);
+      merylutil::resizeArrayPair(seq, qlt, 0, seqMax, seqLen+1);
 
     for (uint64 ii=0; ii<seqLen; ii++) {
       double  bp = genPar.mt.mtRandomRealOpen();
@@ -241,7 +241,7 @@ doGenerate(generateParameters &genPar) {
     seq[seqLen] = 0;
     qlt[seqLen] = 0;
 
-    outputFASTA(stdout, seq, seqLen, 0, genPar.ident, nSeqs);
+    merylutil::outputFASTA(stdout, seq, seqLen, 0, genPar.ident, nSeqs);
 
     nSeqs  += 1;
     nBases += seqLen;

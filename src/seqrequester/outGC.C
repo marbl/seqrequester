@@ -5,10 +5,10 @@ outGC(dnaSeqFile   *seqFile,
 
   char    outName[FILENAME_MAX+1];
   sprintf(outName, "%s.GC.bed", outPrefix);
-  FILE *f = AS_UTL_openOutputFile(outName);
+  FILE *f = merylutil::openOutputFile(outName);
 
   sprintf(outName, "%s.GC.%u.bed", outPrefix, window);
-  FILE *fw = AS_UTL_openOutputFile(outName);
+  FILE *fw = merylutil::openOutputFile(outName);
 
   dnaSeq    seq;
 

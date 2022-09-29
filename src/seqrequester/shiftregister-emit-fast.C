@@ -22,6 +22,8 @@
 #include "shiftregister-gf4.H"
 #include "bits.H"
 
+using merylutil::expandTo3;
+
 void
 emitShiftRegisterFast(shiftRegisterParameters &srPar) {
  //  Allocate space for the loop detector, set local variables.
@@ -105,7 +107,7 @@ emitShiftRegisterFast(shiftRegisterParameters &srPar) {
     buffer[bufferLen++] = srPar.numberToBase(out);
 
     if (bufferLen == bufferMax) {
-      writeToFile(buffer, "bases", sizeof(char), bufferLen, stdout);
+      merylutil::writeToFile(buffer, "bases", sizeof(char), bufferLen, stdout);
 
       bufferLen = 0;
     }
@@ -136,7 +138,7 @@ emitShiftRegisterFast(shiftRegisterParameters &srPar) {
     sr = (sr >> 2) ^ mul;
   }
 
-  writeToFile(buffer, "bases", sizeof(char), bufferLen, stdout);
+  merylutil::writeToFile(buffer, "bases", sizeof(char), bufferLen, stdout);
   fprintf(stdout, "\n");
 
   delete [] buffer;

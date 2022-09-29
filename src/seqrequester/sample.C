@@ -19,6 +19,8 @@
 
 #include "seqrequester.H"
 
+using merylutil::compressedFileWriter;
+
 bool
 sampleParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
 
@@ -35,8 +37,8 @@ sampleParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv)
   }
 
   else if ((mode == modeSample) && (strcmp(argv[arg], "-output") == 0)) {
-    output1 = duplicateString(argv[++arg]);   //  MUST be writable; #'s in the name will
-    output2 = duplicateString(argv[  arg]);   //  be replaced by '1' or '2' later.
+    output1 = merylutil::duplicateString(argv[++arg]);   //  MUST be writable; #'s in the name will
+    output2 = merylutil::duplicateString(argv[  arg]);   //  be replaced by '1' or '2' later.
   }
 
   else if ((mode == modeSample) && (strcmp(argv[arg], "-fasta") == 0)) {
@@ -352,8 +354,8 @@ doSample_paired(vector<char const *> &inputs, sampleParameters &samPar) {
       uint32 of = seqOrder[num].out;
 
       if (of < samPar.numCopies) {
-        outputFASTA(outFile1->file(), seq1.bases(), seq1.length(), 0, seq1.ident());
-        outputFASTA(outFile2->file(), seq2.bases(), seq2.length(), 0, seq2.ident());
+        merylutil::outputFASTA(outFile1->file(), seq1.bases(), seq1.length(), 0, seq1.ident());
+        merylutil::outputFASTA(outFile2->file(), seq2.bases(), seq2.length(), 0, seq2.ident());
       }
 
       num += 1;
@@ -511,12 +513,12 @@ doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
       uint32 of = seqOrder[num].out;
 
       if (of < samPar.numCopies)
-        outputSequence(outFiles[of]->file(),
-                       seq1.ident(), seq1.bases(), seq1.quals(), seq1.length(),
-                       sf1->isFASTQ(),
-                       samPar.outputFASTA,
-                       samPar.outputFASTQ,
-                       samPar.outputQV);
+        merylutil::outputSequence(outFiles[of]->file(),
+                                  seq1.ident(), seq1.bases(), seq1.quals(), seq1.length(),
+                                  sf1->isFASTQ(),
+                                  samPar.outputFASTA,
+                                  samPar.outputFASTQ,
+                                  samPar.outputQV);
 
       if ((++num % 61075) == 0)
         fprintf(stderr, "  wrote %10lu sequences from '%s'\r", num, inputs[ff]);

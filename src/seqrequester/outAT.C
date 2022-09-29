@@ -5,10 +5,10 @@ outAT(dnaSeqFile   *seqFile,
 
   char    outName[FILENAME_MAX+1];
   sprintf(outName, "%s.AT.bed", outPrefix);
-  FILE *f = AS_UTL_openOutputFile(outName);
+  FILE *f = merylutil::openOutputFile(outName);
 
   sprintf(outName, "%s.AT.%u.bed", outPrefix, window);
-  FILE *fw = AS_UTL_openOutputFile(outName);
+  FILE *fw = merylutil::openOutputFile(outName);
 
   dnaSeq    seq;
 

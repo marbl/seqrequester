@@ -135,7 +135,7 @@ simulateParameters::checkOptions(opMode mode, vector<char const *> &inputs, vect
     char const *path = findSharedFile("share/sequence", distribName);
 
     if ((path == nullptr) ||
-        (fileExists(path) == false)) {
+        (merylutil::fileExists(path) == false)) {
       sprintf(errors, "ERROR: File '%s' doesn't exist, and not in any data directory I know about.\n", distribName);
       return(true);
     }
@@ -159,13 +159,13 @@ public:
 
   void
   setSize(uint64 l) {
-    resizeArray(seq, 0, seqMax, l+1);
+    merylutil::resizeArray(seq, 0, seqMax, l+1);
   };
 
   bool
   reverseComplement(bool flip) {
     if (flip)
-      reverseComplementSequence(seq, seqLen);
+      merylutil::reverseComplementSequence(seq, seqLen);
 
     assert(seq[0] != 0);
 

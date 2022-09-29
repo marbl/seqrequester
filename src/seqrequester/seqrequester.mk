@@ -19,16 +19,16 @@ SRC_INCDIRS  := .
 #  meryl-utility.  Otherwise, don't.  (meryl does this too)
 ifneq ($(wildcard stores/sqStore.H), )
   SRC_CXXFLAGS := -DCANU
-  SRC_INCDIRS  := ../../../utility/src/utility ../../../stores
+  SRC_INCDIRS  := ../../../utility/src ../../../stores
 
 #  If we're part of something else, include the something else's
 #  utility directory.
 else ifneq ($(wildcard seqrequester/src/seqrequester/seqrequester.C), )
-  SRC_INCDIRS  := ../../../utility/src/utility
+  SRC_INCDIRS  := ../../../utility/src
 
 #  Otherwise, we're building directly in the seqrequester repo.
 else
-  SRC_INCDIRS  := ../utility/src/utility
+  SRC_INCDIRS  := ../utility/src
 
 endif
 

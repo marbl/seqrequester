@@ -23,7 +23,7 @@ bool
 isInput(int32 arg, int32 argc, char **argv, std::vector<char const *> &inputs) {
 
   if ((strcmp(argv[arg], "-") == 0) ||
-      (fileExists(argv[arg]) == true)) {
+      (merylutil::fileExists(argv[arg]) == true)) {
     inputs.push_back(argv[arg]);
     return(true);
   }

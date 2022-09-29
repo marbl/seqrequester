@@ -121,8 +121,8 @@ doSummarize_loadSequence(dnaSeqFile  *sf,
   char    *buffer    = new char [bufferMax];
   bool     endOfSeq  = false;
 
-  resizeArray(name, 0, nameMax, (uint32)1024);
-  resizeArrayPair(seq, qlt, 0, seqMax, seqLen+1);
+  merylutil::resizeArray(name, 0, nameMax, (uint32)1024);
+  merylutil::resizeArrayPair(seq, qlt, 0, seqMax, seqLen+1);
 
   name[0] = 0;
   seq[0]  = 0;
@@ -132,7 +132,7 @@ doSummarize_loadSequence(dnaSeqFile  *sf,
 
   while (sf->loadBases(buffer, bufferMax, bufferLen, endOfSeq)) {
     if (seqLen + bufferLen >= seqMax)
-      resizeArrayPair(seq, qlt, seqLen, seqMax, 2 * (seqLen + bufferLen + 1));
+      merylutil::resizeArrayPair(seq, qlt, seqLen, seqMax, 2 * (seqLen + bufferLen + 1));
 
     assert(seqLen + bufferLen + 1 < seqMax);
 

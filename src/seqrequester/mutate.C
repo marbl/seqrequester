@@ -172,7 +172,7 @@ doMutate(vector<char const *> &inputs, mutateParameters &mutPar) {
 
       uint32  expectedLen = seq.length() * (1 + 2 * mutPar.pInsert - mutPar.pDelete);
 
-      resizeArrayPair(nBases, nQuals, 0, nMax, expectedLen);
+      merylutil::resizeArrayPair(nBases, nQuals, 0, nMax, expectedLen);
 
       //  Over every base, randomly substitue, insert or delete bases.
 
@@ -183,7 +183,7 @@ doMutate(vector<char const *> &inputs, mutateParameters &mutPar) {
 
         //  Whoops!  Resize again?
         if (oLen + 2 > nMax)
-          resizeArrayPair(nBases, nQuals, oLen, nMax, nMax + 1000);
+          merylutil::resizeArrayPair(nBases, nQuals, oLen, nMax, nMax + 1000);
 
         //  If a chance of doing something, make a random number.
         if (mutPar.pSubstitute[base] + mutPar.pInsert + mutPar.pD[base] > 0.0)
@@ -229,7 +229,7 @@ doMutate(vector<char const *> &inputs, mutateParameters &mutPar) {
 
       //  All done changing.  Output the modified read.
 
-      outputFASTA(stdout, nBases, oLen, 0, seq.ident());
+      merylutil::outputFASTA(stdout, nBases, oLen, 0, seq.ident());
     }
 
     delete sf;

@@ -239,11 +239,11 @@ computeMicroSat(dnaSeqFile *seqFile,
   //  Open files.  If the fwd and rev letters are the same, only
   //  open one set of files.
 
-  FILE *fwdBfile =              AS_UTL_openOutputFile(fwdBname);
-  FILE *fwdWfile =              AS_UTL_openOutputFile(fwdWname);
+  FILE *fwdBfile =              merylutil::openOutputFile(fwdBname);
+  FILE *fwdWfile =              merylutil::openOutputFile(fwdWname);
 
-  FILE *revBfile = (f1 != f2) ? AS_UTL_openOutputFile(revBname) : nullptr;
-  FILE *revWfile = (r1 != r2) ? AS_UTL_openOutputFile(revWname) : nullptr;
+  FILE *revBfile = (f1 != f2) ? merylutil::openOutputFile(revBname) : nullptr;
+  FILE *revWfile = (r1 != r2) ? merylutil::openOutputFile(revWname) : nullptr;
 
   for (dnaSeq seq; (seqFile->loadSequence(seq) == true); )
     computeMicroSat(seq,
@@ -251,11 +251,11 @@ computeMicroSat(dnaSeqFile *seqFile,
                     r1, r2, revBfile, revWfile,
                     window);
 
-  AS_UTL_closeFile(fwdBfile);
-  AS_UTL_closeFile(fwdWfile);
+  merylutil::closeFile(fwdBfile);
+  merylutil::closeFile(fwdWfile);
 
-  AS_UTL_closeFile(revBfile);
-  AS_UTL_closeFile(revWfile);
+  merylutil::closeFile(revBfile);
+  merylutil::closeFile(revWfile);
 }
 
 

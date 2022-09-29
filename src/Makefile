@@ -65,7 +65,7 @@ endef
 #   USE WITH EVAL
 #
 define ADD_OBJECT_RULE
-${1}/%.o: ${2} utility/src/utility/version.H
+${1}/%.o: ${2} utility/src/version.H
 	${3}
 endef
 
@@ -703,7 +703,7 @@ ${TARGET_DIR}/share/seqrequester/pacbio-hifi: ../share/pacbio-hifi
 #  Makefile processed.  Regenerate the version number file, make some
 #  directories, and report that we're starting the build.
 
-$(eval $(shell ../scripts/version_update.pl $(MODULE) utility/src/utility/version.H))
+$(eval $(shell ../scripts/version_update.pl $(MODULE) utility/src/version.H))
 
 $(shell mkdir -p ${TARGET_DIR}/share/seqrequester)
 $(shell mkdir -p ${TARGET_DIR}/bin)

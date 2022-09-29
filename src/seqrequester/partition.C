@@ -19,6 +19,8 @@
 
 #include "seqrequester.H"
 
+using merylutil::compressedFileWriter;
+
 bool
 partitionParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv) {
 
@@ -31,8 +33,8 @@ partitionParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **ar
   }
 
   else if ((mode == modePartition) && (strcmp(argv[arg], "-output") == 0)) {
-    output1 = duplicateString(argv[++arg]);   //  MUST be writable; #'s in the name will
-    output2 = duplicateString(argv[  arg]);   //  be replaced by a file number later.
+    output1 = merylutil::duplicateString(argv[++arg]);   //  MUST be writable; #'s in the name will
+    output2 = merylutil::duplicateString(argv[  arg]);   //  be replaced by a file number later.
   }
 
   else if ((mode == modePartition) && (strcmp(argv[arg], "-writers") == 0)) {
@@ -244,12 +246,12 @@ doPartition_single(vector<char const *> &inputs, partitionParameters &parPar) {
     uint64       nseq = 0;
 
     while (sf1->loadSequence(seq1) == true) {
-      outputSequence(oFile[oIndex]->file(),
-                     seq1.ident(), seq1.bases(), seq1.quals(), seq1.length(),
-                     sf1->isFASTQ(),
-                     parPar.outputFASTA,
-                     parPar.outputFASTQ,
-                     parPar.outputQV);
+      merylutil::outputSequence(oFile[oIndex]->file(),
+                                seq1.ident(), seq1.bases(), seq1.quals(), seq1.length(),
+                                sf1->isFASTQ(),
+                                parPar.outputFASTA,
+                                parPar.outputFASTQ,
+                                parPar.outputQV);
 
       nBases[oIndex] += seq1.length();
       nSeqs[oIndex]  += 1;

@@ -160,8 +160,8 @@ extractParameters::checkOptions(opMode mode, vector<char const *> &inputs, vecto
   //  Decode sequence ranges.
 
   for (auto arg : seqsArgs) {
-    if (fileExists(arg) == true)
-      seqsName.load(arg, splitWords);
+    if (merylutil::fileExists(arg) == true)
+      seqsName.load(arg, merylutil::splitWords);
     else
       decodeRange(arg, seqsBgn, seqsEnd);
   }
@@ -321,7 +321,7 @@ printSequence(dnaSeq &seq,
 
   //  Increase space for the output copy
 
-  resizeArrayPair(extPar.outputBases, extPar.outputQuals, 0, extPar.outputBasesMax, seq.length() + 1);
+  merylutil::resizeArrayPair(extPar.outputBases, extPar.outputQuals, 0, extPar.outputBasesMax, seq.length() + 1);
 
   //  Copy desired bases to the output string.
 
@@ -378,12 +378,12 @@ printSequence(dnaSeq &seq,
 
   //  Output!
 
-  outputSequence(stdout,
-                 seq.ident(), extPar.outputBases, extPar.outputQuals, extPar.outputBasesLen,
-                 sf->isFASTQ(),
-                 extPar.outputFASTA,
-                 extPar.outputFASTQ,
-                 extPar.outputQV);
+  merylutil::outputSequence(stdout,
+                            seq.ident(), extPar.outputBases, extPar.outputQuals, extPar.outputBasesLen,
+                            sf->isFASTQ(),
+                            extPar.outputFASTA,
+                            extPar.outputFASTQ,
+                            extPar.outputQV);
 }
 
 
