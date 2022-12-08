@@ -39,11 +39,15 @@ summarizeParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **ar
   }
 
   else if ((mode == modeSummarize) && (strcmp(argv[arg], "-simple") == 0)) {
-    asSimple = true;
+    asSimple();
   }
 
   else if ((mode == modeSummarize) && (strcmp(argv[arg], "-lengths") == 0)) {
-    asLength = true;
+    asLengths();
+  }
+
+  else if ((mode == modeSummarize) && (strcmp(argv[arg], "-seqlen") == 0)) {
+    asSeqLen();
   }
 
   else if ((mode == modeSummarize) && (strcmp(argv[arg], "-assequences") == 0)) {
@@ -76,8 +80,13 @@ summarizeParameters::showUsage(opMode mode) {
   fprintf(stderr, "  -1x            limit NG table to 1x coverage\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "  -split-n       split sequences at N bases before computing length\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, " Output format:\n");
+  fprintf(stderr, "  (default)      output an N50 table, a histogram picture and mono-,\n");
+  fprintf(stderr, "                   di- and tri-nucleotide frequencies\n");
   fprintf(stderr, "  -simple        output a simple 'length numSequences' histogram\n");
-  fprintf(stderr, "  -lengths       output a list of the sequence lengths\n");
+  fprintf(stderr, "  -lengths       output a list of 'length' for each sequence\n");
+  fprintf(stderr, "  -seqlen        output a list of 'length name' for each sequence\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "  -assequences   load data as complete sequences (for testing)\n");
   fprintf(stderr, "  -asbases       load data as blocks of bases    (for testing)\n");
@@ -480,6 +489,12 @@ doSummarize(vector<char const *> &inputs,
   uint8          *qlt     = nullptr;
   uint64          seqLen  = 0;
 
+  if (sumPar.isSeqLen()) {
+    fprintf(stdout, "--------- ------------  ----------------\n");
+    fprintf(stdout, "-index          length  sequence-name\n");
+    fprintf(stdout, "--------- ------------  ----------------\n");
+  }
+
   for (uint32 ff=0; ff<inputs.size(); ff++) {
     dnaSeqFile  *sf = new dnaSeqFile(inputs[ff]);
 
@@ -514,6 +529,11 @@ doSummarize(vector<char const *> &inputs,
       nmn +=                    (seqLen-0);
       ndn += (seqLen < 2) ? 0 : (seqLen-1);
       ntn += (seqLen < 3) ? 0 : (seqLen-2);
+
+      //  Report seq-len if requensted.
+
+      if (sumPar.isSeqLen())
+        fprintf(stdout, "%-9lu %12lu  %s\n", sf->seqIdx()+1, seqLen, name);
 
       //  If we're NOT splitting on N, add one sequence of the given length.
 
@@ -576,13 +596,13 @@ doSummarize(vector<char const *> &inputs,
 
   //  If only a simple histogram of lengths is requested, dump and done.
 
-  if (sumPar.asSimple == true) {
+  if (sumPar.isSimple() == true) {
     doSummarize_lengthHistogramSimple(shortLengths, shortLengthsLen, longLengths);
   }
 
   //  If only the read lengths are requested, dump and done.
 
-  else if (sumPar.asLength == true) {
+  else if (sumPar.isLengths() == true) {
     doSummarize_dumpLengths(shortLengths, shortLengthsLen, longLengths);
   }
 
@@ -592,7 +612,7 @@ doSummarize(vector<char const *> &inputs,
 #define FMT "%12lu %6.4f"
 #define GC "%05.02f%%"
 
-  else {
+  else if (sumPar.isComplex() == true) {
     doSummarize_lengthHistogram(shortLengths, shortLengthsLen, longLengths, sumPar.genomeSize, sumPar.limitTo1x);
 
     if (nmn == 0)  nmn = 1;   //  Avoid divide by zero.

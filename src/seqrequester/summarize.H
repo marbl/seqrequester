@@ -37,8 +37,24 @@ public:
   bool      limitTo1x   = false;
   bool      breakAtN    = false;
 
-  bool      asSimple    = false;
-  bool      asLength    = false;
+  enum class opmode {
+    complex,
+    simple,
+    lengths,
+    seqLen
+  };
+
+  opmode    mode        = opmode::complex;
+
+  void      asComplex(void)  { mode = opmode::complex; }
+  void      asSimple(void)   { mode = opmode::simple;  }
+  void      asLengths(void)  { mode = opmode::lengths; }
+  void      asSeqLen(void)   { mode = opmode::seqLen;  }
+
+  bool      isComplex(void)  { return(mode == opmode::complex); }
+  bool      isSimple(void)   { return(mode == opmode::simple);  }
+  bool      isLengths(void)  { return(mode == opmode::lengths); }
+  bool      isSeqLen(void)   { return(mode == opmode::seqLen);  }
 
   bool      asSequences = true;
   bool      asBases     = false;
