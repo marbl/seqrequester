@@ -141,7 +141,7 @@ computeMicroSat(dnaSeq    &seq,
     char  bp = 0;
 
     if (ii < basesLen)                  //  Grab sequence if not past the end; if we
-      bp = bases[ii];                   //  are past, do one more loop to close runs.
+      bp = toupper(bases[ii]);          //  are past, do one more loop to close runs.
 
     //  If a match to the forward letters:
 
