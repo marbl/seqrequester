@@ -224,11 +224,8 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
                             uint64           genomeSize,
                             bool             limitTo1x) {
 
-  uint32   nLines   = 0;                      //  Number of lines in the NG table.
-
-  uint32   nCols    = 63;                     //  Magic number to make the histogram the same width as the trinucleotide list
-  uint32   nRows    = 0;                      //  Height of the histogram; dynamically set.
-  uint32   nRowsMin = 50;                     //  Nothing really magic, just fits on the screen.
+  //  NG table dimensions
+  uint32   nNG      = 0;                      //  Number of lines in the NG table.
 
   uint64   lSum  = 0;                         //  Sum of the lengths we've encountered so far
 
@@ -241,19 +238,21 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
 
   sort(longLengths.begin(), longLengths.end(), greater<uint64>());
 
-  //  Find the minimum and maximum values.
+  //
+  //  Find the minimum and maximum lengths, and count the number of
+  //  non-zero-length sequences.
+  //
 
   uint64   minLength = uint64max;
   uint64   maxLength = uint64min;
   uint64   nSeqs     = longLengths.size();    //  Number of sequences we're summarizing.
 
   for (uint64 ll=0; ll<shortLengthsLen; ll++) {
-    if (shortLengths[ll] == 0)
-      continue;
-
-    minLength = std::min(minLength, ll);
-    maxLength = std::max(maxLength, ll);
-    nSeqs    += shortLengths[ll];
+    if (shortLengths[ll] > 0) {
+      minLength = std::min(minLength, ll);
+      maxLength = std::max(maxLength, ll);
+      nSeqs    += shortLengths[ll];
+    }
   }
 
   if (longLengths.size() > 0) {
@@ -261,18 +260,14 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
     maxLength = std::max(minLength, longLengths.front());
   }
 
-  //  Do nothing if there are no sequences.
-
-  if ((minLength == uint64max) &&
-      (maxLength == uint64min))
-    return;
-
+  //
   //  Count the number of lines we expect to get in the NG table.
+  //
 
   auto setStep = [&]()
                  {
                    while (lSum >= nThr) {
-                     nLines++;
+                     nNG++;
 
                      if      (nVal <    200)  nVal += nStep;
                      else if (nVal <   2000)  nVal += nStep * 10;
@@ -296,45 +291,46 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
     setStep();
   }
 
+  if (nNG < 10)
+    nNG = 10;
+
+  //
+  //  Decide how many rows to make in the length histogram table, and how
+  //  many sequences each row will capture.
+  //
+  //  Set it to max(40, nNG) -- either a comfortable table or whatever the NG
+  //  table is -- but reset to 1 sequence per row if it is too big.
   //
 
+  uint32   nLHcols    = 63;                     //  Magic number to make the histogram the same width as the trinucleotide list
+  uint32   nLH        = 40;                     //  Default height of the histogram; dynamically set below.
 
-  if (nLines < nRowsMin)                                //  If there are too few lines in the NG table, make the
-    nRows = nRowsMin;                                   //  histogram plot some minimal size, otherwise, make it
-  else                                                  //  the same size as the NG table.
-    nRows = nLines;
+  uint32   bucketSize = (uint32)ceil((double)(maxLength - minLength) / std::max(nLH, nNG));
 
-  double   bucketSized = (double)(maxLength - minLength) / nRows;
-  uint32   bucketSize  = (uint32)ceil(bucketSized);
-
-  if (bucketSize == 0)                                  //  Happens when all data is the same length.
+  if (bucketSize == 0) {
+    nLH        = 1;
     bucketSize = 1;
-
-  nRows = (maxLength - minLength) / bucketSize;         //  With new bucketSize set, compute number of rows.
-
-  if (nRows > nRowsMin) {                               //  But if we get WAY too many rows, reset.
-    nRows       = nRowsMin;
-    bucketSized = (double)(maxLength - minLength) / nRows;
-    bucketSize  = (uint32)ceil(bucketSized);
   }
 
-  lSum  = 0;                                            //  Reset for actually generating the length histogram.
-  nStep = 10;
-  nVal  = nStep;
-  nThr  = genomeSize * nVal / 100;
+  nLH = 1 + (maxLength - minLength) / bucketSize;   //  With new bucketSize set, compute actual number of rows.
 
-  //  Generate the length histogram.
+  if (lSum == 0)
+    nLH = 0;
 
-  uint32  *nSeqPerLen = new uint32 [nRows + 1];
+  //
+  //  Compute the length histogram.
+  //
 
-  for (uint32 rr=0; rr<nRows+1; rr++)                   //  Clear the histogram.
+  uint32  *nSeqPerLen = new uint32 [nLH];
+
+  for (uint32 rr=0; rr<nLH; rr++)                      //  Clear the histogram.
     nSeqPerLen[rr] = 0;
 
-  for (uint64 ll=0; ll<shortLengthsLen; ll++) {                 //  Count the number of sequences per size range.
+  for (uint64 ll=0; ll<shortLengthsLen; ll++) {         //  Count the number of sequences per size range.
     if (shortLengths[ll] > 0) {
       uint32 r = (ll - minLength) / bucketSize;
 
-      assert(r < nRows+1);
+      assert(r < nLH);
       nSeqPerLen[r] += shortLengths[ll];
     }
   }
@@ -342,41 +338,58 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
   for (uint64 ii=0; ii<longLengths.size(); ii++) {
     uint32 r = (longLengths[ii] - minLength) / bucketSize;
 
-    assert(r < nRows+1);
+    assert(r < nLH);
     nSeqPerLen[r]++;
   }
 
-  uint64  maxCount = 1;                                 //  Avoids divide-by-zero, even if zero can never actually occur.
+  //  Find the maximum size of any bucket.
 
-  for (uint32 rr=0; rr<nRows+1; rr++)                   //  Find the maximum number of sequences in a size range.
+  uint64  maxCount = 1;
+
+  for (uint32 rr=0; rr<nLH; rr++)
     if (maxCount < nSeqPerLen[rr])
       maxCount = nSeqPerLen[rr];
 
-  char **histPlot = new char * [nRows + 1];
+  //
+  //  Generate the length histogram table.
+  //
 
-  for (uint32 rr=0; rr<nRows+1; rr++)                   //  28 is a magic number based on the histPlot[] format string below.
-    histPlot[rr] = new char [28 + nCols + 1];           //  28 = 9 + 1 + 9 + 1 + 7 + 1
+  lSum  = 0;                                            //  Reset for actually generating the length histogram.
+  nStep = 10;
+  nVal  = nStep;
+  nThr  = genomeSize * nVal / 100;
 
-  for (uint32 rr=0; rr<nRows+1; rr++) {                 //  Generate histogram in text.
-    uint32  nn = (uint32)ceil(nSeqPerLen[rr] * nCols / (double)maxCount);
+  //  For each line in the histogram table, write the size range and draw a picture.
+
+  char **histPlot = new char * [nLH];
+
+  for (uint32 rr=0; rr<nLH; rr++) {
+    uint32  nn = (uint32)ceil(nSeqPerLen[rr] * nLHcols / (double)maxCount);
     uint64  lo = (rr+0) * bucketSize + minLength;
     uint64  hi = (rr+1) * bucketSize + minLength - 1;
 
-    if (lo == hi)
+    //fprintf(stdout, "rr %u bucketsize %u minLength %lu lo %lu hi %lu\n", rr, bucketSize, minLength, lo, hi);
+
+    histPlot[rr] = new char [28 + nLHcols + 1];         //  28 = 9 + 1 + 9 + 1 + 7 + 1
+
+    if (lo == hi)                                       //  Size range and number of sequences.
       sprintf(histPlot[rr], "%9lu           %7u|",
               lo, nSeqPerLen[rr]);
     else
       sprintf(histPlot[rr], "%9lu-%-9lu %7u|",
               lo, hi, nSeqPerLen[rr]);
 
-    for (uint32 cc=0; cc<nn; cc++)
+    for (uint32 cc=0; cc<nn; cc++)                      //  ...histogram bars.
       histPlot[rr][28 + cc] = '-';
 
-    histPlot[rr][28 + nn]   = 0;
+    histPlot[rr][28 + nn]   = 0;                        //  ...terminate the line.
+    //fprintf(stdout, "histplot'%s'\n", histPlot[rr]);
   }
 
+  //
   //  Output N table, with length histogram appended at the end of each line.
-
+  //
+  uint32  np = 0;
   uint32  hp = 0;
 
   fprintf(stdout, "\n");
@@ -393,7 +406,7 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
                     while (lSum >= nThr) {
                       if ((limitTo1x == false) ||
                           (nVal <= 100)) {
-                        if (hp <= nRows)
+                        if (hp < nLH)
                           fprintf(stdout, "%05u %12lu %9lu %12lu  ||  %s\n", nVal, seqlen, seqnum, lSum, histPlot[hp++]);
                         else
                           fprintf(stdout, "%05u %12lu %9lu %12lu  ||\n",     nVal, seqlen, seqnum, lSum);
@@ -420,11 +433,25 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
 
   assert(ns-1 == nSeqs);
 
-  //  If we're displaying exactly 1x, write empty lines to get to there.
+  //  Output up to 1x coverage regardless of how much is there.
 
+  while (nVal <= 100) {
+    if (hp < nLH)
+      fprintf(stdout, "%05"    F_U32P " %12s %9s %12s  ||  %s\n",
+              nVal, "-", "-", "-",
+              histPlot[hp++]);
+    else
+      fprintf(stdout, "%05"    F_U32P " %12s %9s %12s  ||\n",
+              nVal, "-", "-", "-");
+
+    nVal += nStep;
+  }
+
+  //  If we're displaying exactly 1x, write empty lines to get to there.
+#if 0
   if (limitTo1x == true) {
     while (nVal <= 100) {
-      if (hp <= nRows)
+      if (hp < nLH)
         fprintf(stdout, "%05"    F_U32P " %12s %9s %12s  ||  %s\n",
                 nVal, "-", "-", "-",
                 histPlot[hp++]);
@@ -435,25 +462,34 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
       nVal += nStep;
     }
   }
+#endif
 
-  //  Now the final summary line.
+  //  Now the summary line for the NG table.
 
-  if (genomeSize == 0)
-    fprintf(stdout, "%07.3fx           %9lu %12lu  ||  %s\n", 0.0, nSeqs, lSum, histPlot[hp++]);   //  Occurs if only empty sequences in the input!
-  else if (hp <= nRows)
-    fprintf(stdout, "%07.3fx           %9lu %12lu  ||  %s\n", (double)lSum / genomeSize, nSeqs, lSum, histPlot[hp++]);
-  else
-    fprintf(stdout, "%07.3fx           %9lu %12lu  ||\n",     (double)lSum / genomeSize, nSeqs, lSum);
+  if (genomeSize == 0) {
+    if (hp < nLH)
+      fprintf(stdout, "%07.3fx           %9lu %12lu  ||  %s\n", 0.0, nSeqs, lSum, histPlot[hp++]);
+    else
+      fprintf(stdout, "%07.3fx           %9lu %12lu  ||\n",     0.0, nSeqs, lSum);
+  }
+  else {
+    if (hp < nLH)
+      fprintf(stdout, "%07.3fx           %9lu %12lu  ||  %s\n", (double)lSum / genomeSize, nSeqs, lSum, histPlot[hp++]);
+    else
+      fprintf(stdout, "%07.3fx           %9lu %12lu  ||\n",     (double)lSum / genomeSize, nSeqs, lSum);
+  }
 
-  while (hp <= nRows)
+
+  //  And any remaining length table lines.
+
+  while (hp < nLH)
     fprintf(stdout, "                                           ||  %s\n", histPlot[hp++]);
 
   fprintf(stdout, "\n");
 
-
   //  Cleanup.
 
-  for (uint32 rr=0; rr<nRows+1; rr++)
+  for (uint32 rr=0; rr<nLH; rr++)
     delete [] histPlot[rr];
 
   delete [] histPlot;
@@ -465,8 +501,8 @@ doSummarize_lengthHistogram(uint64          *shortLengths,
 void
 doSummarize(vector<char const *> &inputs,
             summarizeParameters  &sumPar) {
-  uint32          shortLengthsLen = 1048576;
-  uint64         *shortLengths    = new uint64 [shortLengthsLen];
+  uint32          shortLengthsLen = 0;
+  uint64         *shortLengths    = nullptr;
   vector<uint64>  longLengths;
 
   uint64          nSeqs  = 0;
@@ -494,6 +530,8 @@ doSummarize(vector<char const *> &inputs,
     fprintf(stdout, "-index          length  sequence-name\n");
     fprintf(stdout, "--------- ------------  ----------------\n");
   }
+
+  merylutil::allocateArray(shortLengths, shortLengthsLen, 1048576);
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
     dnaSeqFile  *sf = new dnaSeqFile(inputs[ff]);
@@ -555,23 +593,18 @@ doSummarize(vector<char const *> &inputs,
       bgn = 0;
 
       while (pos < seqLen) {
-
-        //  Skip any N's.
-        while ((pos < seqLen) && ((seq[pos] == 'n') ||
+        while ((pos < seqLen) && ((seq[pos] == 'n') ||    //  Skip N's.
                                   (seq[pos] == 'N')))
           pos++;
 
-        //  Remember our start position.
-        bgn = pos;
+        bgn = pos;                                        //  Remember our start position.
 
-        //  Move ahead until the end of sequence or an N.
-        while ((pos < seqLen) && ((seq[pos] != 'n') &&
+        while ((pos < seqLen) && ((seq[pos] != 'n') &&    //  Move ahead until the end of sequence or an N.
                                   (seq[pos] != 'N')))
           pos++;
 
-        //  If a sequence, increment stuff.
-        if (pos - bgn > 0) {
-          nSeqs  += 1;
+        if (pos - bgn > 0) {                              //  If a non-empty sequence
+          nSeqs  += 1;                                    //  summarize it.
           nBases += pos - bgn;
 
           if (pos - bgn < shortLengthsLen)
@@ -580,12 +613,10 @@ doSummarize(vector<char const *> &inputs,
             longLengths.push_back(pos - bgn);
         }
       }
-    }
-
-    //  All done!
+    }   //  Over sequences in the file.
 
     delete sf;
-  }
+  }   //  Over input files.
 
   delete [] name;
   delete [] seq;
@@ -609,9 +640,6 @@ doSummarize(vector<char const *> &inputs,
   //  Otherwise, generate a fancy histogram plot.
   //  And finish with the mono-, di- and tri-nucleotide frequencies.
 
-#define FMT "%12lu %6.4f"
-#define GC "%05.02f%%"
-
   else if (sumPar.isComplex() == true) {
     doSummarize_lengthHistogram(shortLengths, shortLengthsLen, longLengths, sumPar.genomeSize, sumPar.limitTo1x);
 
@@ -619,7 +647,11 @@ doSummarize(vector<char const *> &inputs,
     if (ndn == 0)  ndn = 1;
     if (ntn == 0)  ntn = 1;
 
-    double gc = 100.0 * (mn[0x01] + mn[0x03]) / (mn[0x00] + mn[0x01] + mn[0x03] + mn[0x02]);
+    double gc = 100.0 * (mn[0x01] + mn[0x03]) / nmn;
+    double at = 100.0 * (mn[0x00] + mn[0x02]) / nmn;
+
+#define FMT "%12lu %6.4f"
+#define GC "%05.02f%%"
 
     fprintf(stdout, "--------------------- --------------------- ----------------------------------------------------------------------------------------------\n");
     fprintf(stdout, "       mononucleotide          dinucleotide                                                                                  trinucleotide\n");
@@ -630,7 +662,7 @@ doSummarize(vector<char const *> &inputs,
     fprintf(stdout, ""             FMT " T" FMT " AT" FMT " ATA " FMT " ATC " FMT " ATG " FMT " ATT\n", mn[0x02], mn[0x02] / nmn, dn[0x02], dn[0x02] / ndn, tn[0x08], tn[0x08] / ntn, tn[0x09], tn[0x09] / ntn, tn[0x0b], tn[0x0b] / ntn, tn[0x0a], tn[0x0a] / ntn);
     fprintf(stdout, "                     " FMT " CA" FMT " CAA " FMT " CAC " FMT " CAG " FMT " CAT\n",                           dn[0x04], dn[0x04] / ndn, tn[0x10], tn[0x10] / ntn, tn[0x11], tn[0x11] / ntn, tn[0x13], tn[0x13] / ntn, tn[0x12], tn[0x12] / ntn);
     fprintf(stdout, "      --GC--  --AT-- " FMT " CC" FMT " CCA " FMT " CCC " FMT " CCG " FMT " CCT\n",                           dn[0x05], dn[0x05] / ndn, tn[0x14], tn[0x14] / ntn, tn[0x15], tn[0x15] / ntn, tn[0x17], tn[0x17] / ntn, tn[0x16], tn[0x16] / ntn);
-    fprintf(stdout, "      " GC "  " GC " " FMT " CG" FMT " CGA " FMT " CGC " FMT " CGG " FMT " CGT\n", gc, 100 - gc,             dn[0x07], dn[0x07] / ndn, tn[0x1c], tn[0x1c] / ntn, tn[0x1d], tn[0x1d] / ntn, tn[0x1f], tn[0x1f] / ntn, tn[0x1e], tn[0x1e] / ntn);
+    fprintf(stdout, "      " GC "  " GC " " FMT " CG" FMT " CGA " FMT " CGC " FMT " CGG " FMT " CGT\n", gc, at,                   dn[0x07], dn[0x07] / ndn, tn[0x1c], tn[0x1c] / ntn, tn[0x1d], tn[0x1d] / ntn, tn[0x1f], tn[0x1f] / ntn, tn[0x1e], tn[0x1e] / ntn);
     fprintf(stdout, "                     " FMT " CT" FMT " CTA " FMT " CTC " FMT " CTG " FMT " CTT\n",                           dn[0x06], dn[0x06] / ndn, tn[0x18], tn[0x18] / ntn, tn[0x19], tn[0x19] / ntn, tn[0x1b], tn[0x1b] / ntn, tn[0x1a], tn[0x1a] / ntn);
     fprintf(stdout, "                     " FMT " GA" FMT " GAA " FMT " GAC " FMT " GAG " FMT " GAT\n",                           dn[0x0c], dn[0x0c] / ndn, tn[0x30], tn[0x30] / ntn, tn[0x31], tn[0x31] / ntn, tn[0x33], tn[0x33] / ntn, tn[0x32], tn[0x32] / ntn);
     fprintf(stdout, "                     " FMT " GC" FMT " GCA " FMT " GCC " FMT " GCG " FMT " GCT\n",                           dn[0x0d], dn[0x0d] / ndn, tn[0x34], tn[0x34] / ntn, tn[0x35], tn[0x35] / ntn, tn[0x37], tn[0x37] / ntn, tn[0x36], tn[0x36] / ntn);
@@ -642,5 +674,7 @@ doSummarize(vector<char const *> &inputs,
     fprintf(stdout, "                     " FMT " TT" FMT " TTA " FMT " TTC " FMT " TTG " FMT " TTT\n",                           dn[0x0a], dn[0x0a] / ndn, tn[0x28], tn[0x28] / ntn, tn[0x29], tn[0x29] / ntn, tn[0x2b], tn[0x2b] / ntn, tn[0x2a], tn[0x2a] / ntn);
     fprintf(stdout, "\n");
   }
+
+  delete [] shortLengths;
 }
 
