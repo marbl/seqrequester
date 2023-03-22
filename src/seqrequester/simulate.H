@@ -30,7 +30,7 @@ public:
   bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
   void      showUsage(opMode mode);
 
-  bool      checkOptions(opMode mode, std::vector<char const *> &inputs, std::vector<char const *> &errors);
+  bool      checkOptions(opMode mode, std::vector<char const *> &inputs, std::vector<char const *> &errors, char const *progName);
 
 public:
   uint64  genomeSize         = 0;

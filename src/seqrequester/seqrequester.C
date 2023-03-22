@@ -73,18 +73,17 @@ main(int argc, char **argv) {
   //  supplied options generate errors; false if there are no errors or
   //  the mode is not active.
 
-  if ((extPar.checkOptions(mode, inputs, errors) == true) ||
-      (genPar.checkOptions(mode, inputs, errors) == true) ||
-      ( msPar.checkOptions(mode, inputs, errors) == true) ||
-      (mutPar.checkOptions(mode, inputs, errors) == true) ||
-      (parPar.checkOptions(mode, inputs, errors) == true) ||
-      (samPar.checkOptions(mode, inputs, errors) == true) ||
-      ( srPar.checkOptions(mode, inputs, errors) == true) ||
-      (simPar.checkOptions(mode, inputs, errors) == true) ||
-      (sumPar.checkOptions(mode, inputs, errors) == true) ||
-      (mode == modeUnset)) {
-    //  And do what?
-  }
+  if ((extPar.checkOptions(mode, inputs, errors)          == true) ||
+      (genPar.checkOptions(mode, inputs, errors)          == true) ||
+      ( msPar.checkOptions(mode, inputs, errors)          == true) ||
+      (mutPar.checkOptions(mode, inputs, errors)          == true) ||
+      (parPar.checkOptions(mode, inputs, errors)          == true) ||
+      (samPar.checkOptions(mode, inputs, errors)          == true) ||
+      ( srPar.checkOptions(mode, inputs, errors)          == true) ||
+      (simPar.checkOptions(mode, inputs, errors, argv[0]) == true) ||
+      (sumPar.checkOptions(mode, inputs, errors)          == true) ||
+      (mode == modeUnset))
+    sprintf(errors, "ERROR:  Supplied options don't make sense.\n");
 
   //  If errors, report usage.
 

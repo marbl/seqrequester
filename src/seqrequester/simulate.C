@@ -119,28 +119,28 @@ simulateParameters::showUsage(opMode mode) {
 
 
 bool
-simulateParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
+simulateParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors, char const *progName) {
 
   if (mode != modeSimulate)
     return(false);
 
-  if ((genomeName == nullptr) ||
-      (genomeName[0] == 0))
+  //  Check the genome exists.
+
+  if (genomeName == nullptr)
     sprintf(errors, "ERROR:  No reference genome sequence (-genome) supplied.\n");
+
+  if (merylutil::fileExists(genomeName) == false)
+    sprintf(errors, "ERROR:  Reference genome sequence (-genome) '%s' not found.\n", genomeName);
 
   //  Load any read length distribution.
 
-  if ((distribName == nullptr) ||
-      (distribName[0] == 0)) {
-    char const *path = findSharedFile("share/sequence", distribName);
+  if (distribName != nullptr) {
+    char const *path = findSharedFile(progName, "share/seqrequester", distribName);
 
-    if ((path == nullptr) ||
-        (merylutil::fileExists(path) == false)) {
+    if (merylutil::fileExists(path) == false)
       sprintf(errors, "ERROR: File '%s' doesn't exist, and not in any data directory I know about.\n", distribName);
-      return(true);
-    }
-
-    dist.loadDistribution(path);
+    else
+      dist.loadDistribution(path);
   }
 
   return(errors.size() > 0);
