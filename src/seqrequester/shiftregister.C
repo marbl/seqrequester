@@ -241,7 +241,7 @@ doShiftRegister(shiftRegisterParameters &srPar) {
   else if ((srPar.search == false) && (srPar.fast == true))
     emitShiftRegisterFast(srPar);
 
-  else if ((srPar.search == true) && (srPar.fast == false))
+  else if ((srPar.search == false) && (srPar.fast == false))
     emitShiftRegisterSlow(srPar);
 }
 
