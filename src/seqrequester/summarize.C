@@ -505,7 +505,6 @@ doSummarize(vector<char const *> &inputs,
   uint64         *shortLengths    = nullptr;
   vector<uint64>  longLengths;
 
-  uint64          nSeqs  = 0;
   uint64          nBases = 0;
 
   uint32          mer = 0;
@@ -576,7 +575,6 @@ doSummarize(vector<char const *> &inputs,
       //  If we're NOT splitting on N, add one sequence of the given length.
 
       if (sumPar.breakAtN == false) {
-        nSeqs  += 1;
         nBases += seqLen;
 
         if (seqLen < shortLengthsLen)
@@ -604,8 +602,7 @@ doSummarize(vector<char const *> &inputs,
           pos++;
 
         if (pos - bgn > 0) {                              //  If a non-empty sequence
-          nSeqs  += 1;                                    //  summarize it.
-          nBases += pos - bgn;
+          nBases += pos - bgn;                            //  summarize it.
 
           if (pos - bgn < shortLengthsLen)
             shortLengths[pos - bgn]++;

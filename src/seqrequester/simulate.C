@@ -484,9 +484,6 @@ doSimulate_test(simulateParameters &simPar,
                 uint64              seqsLen,        //  Total length of all sequences
                 uint64              nReadsMax,
                 uint64              nBasesMax) {
-  uint64  nReads = 0;
-  uint64  nBases = 0;
-
   simRead  *read   = new simRead;
 
   //  Compute the length of the sequence we're sampling reads from.
@@ -510,12 +507,8 @@ doSimulate_test(simulateParameters &simPar,
 
   //  Iterate over every start position, extract the sequence, and output.
 
-  for (uint64 desiredStart=0; desiredStart < effectiveLength; desiredStart++) {
-    doSimulate_findSequence(simPar, seqs, desiredStart, desiredLength, read, nReads+1);
-
-    nReads += 1;
-    nBases += read->seqLen;
-  }
+  for (uint64 desiredStart=0; desiredStart < effectiveLength; desiredStart++)
+    doSimulate_findSequence(simPar, seqs, desiredStart, desiredLength, read, desiredStart+1);
 
   delete read;
 }
