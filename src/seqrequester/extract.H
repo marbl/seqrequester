@@ -36,6 +36,11 @@ private:
   void      loadNames(void);
 
 public:
+  bool      isDesired(uint32      seqIndex,
+                      char const *seqName,
+                      uint32      seqLength);
+
+public:
   std::vector<char const *>  baseArgs;               //  Base ranges to print
   std::vector<uint64>        baseBgn;                //
   std::vector<uint64>        baseEnd;                //
@@ -49,6 +54,10 @@ public:
   std::vector<uint64>        lensMin;                //  Length ranges to print
   std::vector<uint64>        lensMax;                //
 
+  bool                       invertSeqsList  = false;
+  bool                       invertLensList  = false;
+  bool                       invertBaseList = false;
+
   bool                       asReverse    = false;
   bool                       asComplement = false;
 
@@ -58,7 +67,6 @@ public:
   bool                       asCompressed = false;
 
   bool                       doMasking    = false;   //  Mask out any base not in baseBgn/baseEnd with 'N'
-
   bool                       maskWithN    = true;    //  Mask with lowercase sequence instead of 'N'
 
   bool                       outputFASTA  = false;

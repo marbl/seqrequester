@@ -26,52 +26,58 @@ extractParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv
     mode = modeExtract;
   }
 
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-bases") == 0)) {
-    decodeRange(argv[++arg], baseBgn, baseEnd);
-  }
-
   else if ((mode == modeExtract) && (strcmp(argv[arg], "-sequences") == 0)) {
     seqsArgs.push_back(argv[++arg]);
-  }
-
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-reverse") == 0)) {
-    asReverse = true;
-  }
-
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-complement") == 0)) {
-    asComplement = true;
-  }
-
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-rc") == 0)) {
-    asReverse = true;
-    asComplement = true;
-  }
-
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-upper") == 0)) {
-    asUpperCase = true;
-  }
-
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-lower") == 0)) {
-    asLowerCase = true;
-  }
-
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-compress") == 0)) {
-    asCompressed = true;
   }
 
   else if ((mode == modeExtract) && (strcmp(argv[arg], "-length") == 0)) {
     lensArgs.push_back(argv[++arg]);
   }
 
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-lowermask") == 0)) {
-    doMasking = true;
-    maskWithN = false;
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-bases") == 0)) {
+    decodeRange(argv[++arg], baseBgn, baseEnd);
   }
 
-  else if ((mode == modeExtract) && (strcmp(argv[arg], "-nmask") == 0)) {
-    doMasking = true;
-    maskWithN = true;
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-invert-seqslist") == 0)) {
+    invertSeqsList = true;
   }
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-invert-lenslist") == 0)) {
+    invertLensList = true;
+  }
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-invert-baselist") == 0)) {
+    invertBaseList = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-reverse") == 0)) {
+    asReverse = true;
+  }
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-complement") == 0)) {
+    asComplement = true;
+  }
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-rc") == 0)) {
+    asReverse = true;
+    asComplement = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-compress") == 0)) {
+    asCompressed = true;
+  }
+
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-upcase") == 0)) {
+    asUpperCase = true;
+  }
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-downcase") == 0)) {
+    asLowerCase = true;
+  }
+
+  //else if ((mode == modeExtract) && (strcmp(argv[arg], "-lowermask") == 0)) {
+  //  doMasking = true;
+  //  maskWithN = false;
+  //}
+  //else if ((mode == modeExtract) && (strcmp(argv[arg], "-nmask") == 0)) {
+  //  doMasking = true;
+  //  maskWithN = true;
+  //}
 
   else if ((mode == modeExtract) && (strcmp(argv[arg], "-fasta") == 0)) {
     outputFASTA = true;
@@ -99,49 +105,78 @@ extractParameters::showUsage(opMode mode) {
     return;
 
   fprintf(stderr, "OPTIONS for extract mode:\n");
-  fprintf(stderr, "  -bases     baselist   extract bases specified in the 'baselist' from\n");
-  fprintf(stderr, "                        each sequence\n");
-  fprintf(stderr, "  -sequences seqlist    extract ordinal sequences specified in the 'seqlist'\n");
-  fprintf(stderr, "  -sequences namefile   extract sequences with names listed in 'namefile'\n");
+  fprintf(stderr, "  SEQUENCE SELECTION:\n");
+  fprintf(stderr, "    -sequences seqlist    select sequences with ordinal listed in the 'seqlist'\n");
+  fprintf(stderr, "    -sequences namefile   select sequences with name listed in 'namefile'\n");
   fprintf(stderr, "\n");
-  fprintf(stderr, "  -reverse              reverse the bases in the sequence\n");
-  fprintf(stderr, "  -complement           complement the bases in the sequence\n");
-  fprintf(stderr, "  -rc                   alias for -reverse -complement\n");
+  fprintf(stderr,   "  -length min-max       select sequence if it is at least 'min' bases and at\n");
+  fprintf(stderr, "                          most 'max' bases long - that is, inclusive\n");
   fprintf(stderr, "\n");
-  fprintf(stderr, "  -compress             compress homopolymer runs to one base\n");
+  fprintf(stderr, "    -bases baselist       select bases listed in 'baselist' from each sequence\n");
   fprintf(stderr, "\n");
-  fprintf(stderr, "  -upcase\n");
-  fprintf(stderr, "  -downcase\n");
+  fprintf(stderr, "    -invert-seqslist      select all unselected sequences for output\n");
+  fprintf(stderr, "    -invert-lenslist      select all unselected lengths for output\n");
+  fprintf(stderr, "    -invert-baselist      select all unselected bases for output\n");
   fprintf(stderr, "\n");
-  fprintf(stderr, "  -fasta                write output as FASTA\n");
-  fprintf(stderr, "  -fastq [q]            write output as FASTQ; if no quality values, use q\n");
-  fprintf(stderr, "                        (integer, 0-based) for all bases; default q=20\n");
+  fprintf(stderr, "  OUTPUT FORMAT:\n");
+  fprintf(stderr, "    -reverse              reverse the bases in the sequence\n");
+  fprintf(stderr, "    -complement           complement the bases in the sequence\n");
+  fprintf(stderr, "    -rc                   alias for -reverse -complement\n");
   fprintf(stderr, "\n");
-  fprintf(stderr, "  -length min-max       print sequence if it is at least 'min' bases and at\n");
-  fprintf(stderr, "                        most 'max' bases long\n");
+  fprintf(stderr, "    -compress             compress homopolymer runs to one base\n");
   fprintf(stderr, "\n");
-  fprintf(stderr, "    a 'baselist' is a set of integers formed from any combination\n");
-  fprintf(stderr, "    of the following, seperated by a comma:\n");
-  fprintf(stderr, "         num       a single number\n");
-  fprintf(stderr, "         bgn-end   a range of numbers:  bgn <= end\n");
-  fprintf(stderr, "    bases are spaced-based; -bases 0-2,4 will print the bases between\n");
-  fprintf(stderr, "    the first two spaces (the first two bases) and the base after the\n");
-  fprintf(stderr, "    fourth space (the fifth base).\n");
-  fprintf(stderr, "  \n");
+  fprintf(stderr, "    -upcase\n");
+  fprintf(stderr, "    -downcase\n");
+  fprintf(stderr, "\n");
+  //fprintf(stderr, "    -lowermask\n");
+  //fprintf(stderr, "    -nmask\n");
+  //fprintf(stderr, "\n");
+  fprintf(stderr, "    -fasta                write output as FASTA\n");
+  fprintf(stderr, "    -fastq [q]            write output as FASTQ; if no quality values, use q\n");
+  fprintf(stderr, "                          (integer, 0-based) for all bases; default q=20\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "\n");
   fprintf(stderr, "    a 'seqlist' is a set of integers formed from any combination\n");
-  fprintf(stderr, "    of the following, seperated by a comma:\n");
+  fprintf(stderr, "    of the following, separated by commas:\n");
   fprintf(stderr, "         num       a single number\n");
   fprintf(stderr, "         bgn-end   a range of numbers:  bgn <= end\n");
   fprintf(stderr, "    sequences are 1-based; -sequences 1,3-5 will print the first, third,\n");
-  fprintf(stderr, "    fourth and fifth sequences.\n");
-  fprintf(stderr, "  \n");
-  fprintf(stderr, "    a 'namefile' contains the names of sequences to extract, one per line,\n");
+  fprintf(stderr, "    fourth and fifth sequences in the input.\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "    a 'namefile' contains the names of sequences to select, one per line,\n");
   fprintf(stderr, "    without any leading '>' or '@'.  a name is the first word on the ident line.\n");
-  fprintf(stderr, "    NOTA BENE: at most one namefile cn be supplied.\n");
-  fprintf(stderr, "  \n");
+  fprintf(stderr, "    NOTA BENE: at most one namefile can be supplied.\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "    a 'baselist' is a set of integer ranges, separated by commas, indicating\n");
+  fprintf(stderr, "    the spaces-between-letters bounding the sequence to select.\n");
+  fprintf(stderr, "    -bases 0-2,4-7 will select letters ABEFG from the following sequence:\n");
+  fprintf(stderr, "       0th A 1st B 2nd C 3ed D 4th E 5th F 6th G 7th H 8th ...\n");
+  fprintf(stderr, "       ---   ---   ---   ---   ---   ---   ---   ---   ---  <- spaces\n");
+  fprintf(stderr, "\n");
 }
 
 
+template<typename TT>
+void
+invertBgnEnd(std::vector<TT> &oBgn, std::vector<TT> &oEnd) {
+    std::vector<TT>  nBgn;
+    std::vector<TT>  nEnd;
+
+    if (oBgn[0] > 0) {                         //  If the first interval is not at the start, add
+      nBgn.push_back(0);                       //  a new interval covering the start of the
+      nEnd.push_back(oBgn[0]-1);               //  sequence.
+    }
+
+    oBgn.push_back(uint64max);                 //  Make the last new interval end at infinity.
+
+    for (uint32 ii=0; ii<oEnd.size(); ii++) {  //  Loop over each interval, adding a new
+      nBgn.push_back(oEnd[ii]+1);              //  one covering the gap between ii and ii+1.
+      nEnd.push_back(oBgn[ii+1]-1);            //  The last new one we add is from the end
+    }                                          //  of th last interval to infinity.
+
+    oBgn = nBgn;
+    oEnd = nEnd;
+}
 
 bool
 extractParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
@@ -152,12 +187,25 @@ extractParameters::checkOptions(opMode mode, vector<char const *> &inputs, vecto
   if (inputs.size() == 0)
     sprintf(errors, "ERROR:  No input sequence files supplied.\n");
 
-  //  Decode base ranges.
+  //  Decode base ranges, invert if needed, but if none supplied, output all bases.
 
   for (auto arg : baseArgs)
     decodeRange(arg, baseBgn, baseEnd);
 
-  //  Decode sequence ranges.
+  if ((baseBgn.size() > 0) && (invertBaseList == true))
+    invertBgnEnd(baseBgn, baseEnd);
+
+  if (baseBgn.size() == 0) {
+    baseBgn.push_back(0);
+    baseEnd.push_back(UINT64_MAX);
+  }
+
+#if 1
+  for (uint32 ii=0; ii<baseBgn.size(); ii++)
+    fprintf(stderr, "BASES: #%02u - %4lu-%-4lu\n", ii, baseBgn[ii], baseEnd[ii]);
+#endif
+
+  //  Decode sequence ranges, invert if needed, but if none supplied, output all sequences.
 
   for (auto arg : seqsArgs) {
     if (merylutil::fileExists(arg) == true)
@@ -166,31 +214,36 @@ extractParameters::checkOptions(opMode mode, vector<char const *> &inputs, vecto
       decodeRange(arg, seqsBgn, seqsEnd);
   }
 
-  //  If no sequence range specified, output all sequences.
+  if ((seqsBgn.size() > 0) && (invertSeqsList == true))
+    invertBgnEnd(seqsBgn, seqsEnd);
 
   if ((seqsName.size() == 0) && (seqsBgn.size() == 0)) {
     seqsBgn.push_back(1);
     seqsEnd.push_back(UINT64_MAX);
   }
 
-  //  Decode length ranges.
+#if 1
+  for (uint32 ii=0; ii<seqsBgn.size(); ii++)
+    fprintf(stderr, "SEQS:  #%02u - %4lu-%-4lu\n", ii, seqsBgn[ii], seqsEnd[ii]);
+#endif
+
+  //  Decode length ranges, but if none supplied, output all lengths.
 
   for (auto arg : lensArgs)
     decodeRange(arg, lensMin, lensMax);
 
-  //  If no base range specified, output all bases.
-
-  if (baseBgn.size() == 0) {
-    baseBgn.push_back(0);
-    baseEnd.push_back(UINT64_MAX);
-  }
-
-  //  If no length restriction, output all lengths.
+  if ((seqsBgn.size() > 0) && (invertLensList == true))
+    invertBgnEnd(lensMin, lensMax);
 
   if (lensMin.size() == 0) {
     lensMin.push_back(0);
     lensMax.push_back(UINT64_MAX);
   }
+
+#if 1
+  for (uint32 ii=0; ii<lensMin.size(); ii++)
+    fprintf(stderr, "LENS:  #%02u - %4lu-%-4lu\n", ii, lensMin[ii], lensMax[ii]);
+#endif
 
   //  Check and adjust the sequence ranges.
   //
@@ -275,34 +328,34 @@ doExtract_compress(char    *outputBases,
 
 
 bool
-isDesired(uint32             seqIndex,
-          char const        *seqName,
-          uint32             seqLength,
-          extractParameters &extPar) {
+extractParameters::isDesired(uint32      seqIndex,
+                             char const *seqName,
+                             uint32      seqLength) {
   bool  desired = false;
 
   //  Check if this is on our desired index list.
-  if (extPar.seqsBgn.size() > 0) {
-    for (uint32 si=0; (desired == false) && (si < extPar.seqsBgn.size()); si++)
-      if ((extPar.seqsBgn[si] <= seqIndex) &&
-          (seqIndex <= extPar.seqsEnd[si]))
+  if (seqsBgn.size() > 0) {
+    for (uint32 si=0; (desired == false) && (si < seqsBgn.size()); si++)
+      if ((seqsBgn[si] <= seqIndex) &&
+          (seqIndex <= seqsEnd[si]))
         desired = true;
   }
 
-  //  Check if this is on our desired name list (with a special case for .
-  if ((extPar.seqsName.size() > 0) && (seqName != nullptr)) {
-    for (uint32 si=0; (desired == false) && (si < extPar.seqsName.size()); si++)
-      if (strcmp(seqName, extPar.seqsName[si]) == 0)
+  //  Check if this is on our desired name list.
+  if ((seqsName.size() > 0) && (seqName != nullptr)) {
+    for (uint32 si=0; (desired == false) && (si < seqsName.size()); si++)
+      if (((invertSeqsList == false) && (strcmp(seqName, seqsName[si]) == 0)) ||
+          ((invertSeqsList ==  true) && (strcmp(seqName, seqsName[si]) != 0)))
         desired = true;
   }
 
   //  Check if the length of this sequence is in our desired range.
-  if (extPar.lensMin.size() > 0) {
+  if (lensMin.size() > 0) {
     bool  d = false;
 
-    for (uint32 li=0; (d == false) && (li < extPar.lensMin.size()); li++)
-      if ((extPar.lensMin[li] <= seqLength) &&
-          (seqLength <= extPar.lensMax[li]))
+    for (uint32 li=0; (d == false) && (li < lensMin.size()); li++)
+      if ((lensMin[li] <= seqLength) &&
+          (seqLength <= lensMax[li]))
         d = true;
 
     if (d == false)
@@ -378,12 +431,13 @@ printSequence(dnaSeq &seq,
 
   //  Output!
 
-  merylutil::outputSequence(stdout,
-                            seq.ident(), extPar.outputBases, extPar.outputQuals, extPar.outputBasesLen,
-                            sf->isFASTQ(),
-                            extPar.outputFASTA,
-                            extPar.outputFASTQ,
-                            extPar.outputQV);
+  if (extPar.outputBasesLen > 0)
+    merylutil::outputSequence(stdout,
+                              seq.ident(), extPar.outputBases, extPar.outputQuals, extPar.outputBasesLen,
+                              sf->isFASTQ(),
+                              extPar.outputFASTA,
+                              extPar.outputFASTQ,
+                              extPar.outputQV);
 }
 
 
@@ -401,7 +455,7 @@ doExtract(vector<char const *> &inputs,
     //
     if ((extPar.seqsName.size() > 0) || (sf->isIndexable() == false)) {
       while (sf->loadSequence(seq) == true)
-        if (isDesired(sf->seqIdx(), seq.ident(), seq.length(), extPar))
+        if (extPar.isDesired(sf->seqIdx(), seq.ident(), seq.length()))
           printSequence(seq, sf, extPar);
     }
 
@@ -418,7 +472,7 @@ doExtract(vector<char const *> &inputs,
         uint64  send = min(extPar.seqsEnd[si], sf->numberOfSequences());
 
         for (uint64 ss=sbgn; ss<send; ss++)
-          if (isDesired(ss, nullptr, sf->sequenceLength(ss), extPar) &&
+          if (extPar.isDesired(ss, nullptr, sf->sequenceLength(ss)) &&
               sf->findSequence(ss) &&
               sf->loadSequence(seq))
             printSequence(seq, sf, extPar);
