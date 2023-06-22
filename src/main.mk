@@ -63,7 +63,8 @@ SOURCES      := utility/src/align/align-ksw2-driver.C \
                 utility/src/system/speedCounter-v1.C \
                 utility/src/system/sweatShop-v1.C \
                 utility/src/system/system-stackTrace-v1.C \
-                utility/src/system/system-v1.C
+                utility/src/system/system-v1.C \
+                utility/src/system/time-v1.C
 
 ifeq (${BUILDSTACKTRACE}, 1)
 SOURCES      += utility/src/system/libbacktrace/atomic.c \
@@ -84,6 +85,10 @@ endif
 SRC_INCDIRS  := . \
                 seqrequester \
                 utility/src
+
+FILES += ../share/ultra-long-nanopore    -> share/seqrequester/ultra-long-nanopore \
+         ../share/pacbio                 -> share/seqrequester/pacbio              \
+         ../share/pacbio-hifi            -> share/seqrequester/pacbio-hifi
 
 SUBMAKEFILES := seqrequester/seqrequester.mk
 
