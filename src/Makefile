@@ -375,7 +375,7 @@ all: $(addprefix ${TARGET_DIR}/,${ALL_TGTS})
 
 .PHONY: clean
 clean:
-	find build -type d -print | sort -r | xargs -n 100 rmdir
+	if [ -d ../build ] ; then find ../build -type d -print | sort -r | xargs -n 100 rmdir ;  fi
 	@echo ""
 	@echo "Cleaned."
 	@echo ""
@@ -397,7 +397,7 @@ $(eval $(call BOILERMAKE))
 #  for make to one file.
 #
 
-VERSION_H := $(shell ../scripts/version_update.pl ${MODULE} version.H)
+VERSION_H := $(shell ../scripts/version_update.pl ${MODULE} utility/src/version.H)
 
 include ${VERSION_H}
 
