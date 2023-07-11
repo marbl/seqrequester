@@ -160,6 +160,9 @@ endef
 #  adjacent white space to a single space, then replacing adjacent whitespace
 #  with nothing.
 #
+#  (The $\ at the end of some of these lines serve to eat up whitespace
+#   before the continued line.)
+#
 define MAKE_FILE_COPY_LIST
   $(subst         $  ->$ ,->,$\
           $(subst $ -> $ ,->,$\
