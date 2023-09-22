@@ -3,7 +3,19 @@
 This is 'seqrequester', a tool for summarizing, extracting, generating and
 modifying DNA sequences.
 
-# Summarizing
+## Installation
+### Dependency
+* GCC (tested with 11.3.0)
+* git 2.25.1 or higher
+
+### Make
+```
+git clone https://github.com/marbl/seqrequester.git
+cd src
+make -j 12
+```
+
+## Summarizing
 
 The summarize mode will generate a table of Nx lengths, a lovely ASCII
 plot of the histogram of sequence lengths, report GC content, and di-
