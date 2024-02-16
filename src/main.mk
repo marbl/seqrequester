@@ -1,4 +1,7 @@
-MODULE       :=    seqrequester
+MODULE       := seqrequester
+VERSION      := snapshot 0.0
+VERSION_H    := utility/src/version.H
+
 TARGET       := libseqrequester.a
 SOURCES      := utility/src/align/align-ksw2-driver.C \
                 utility/src/align/align-ksw2-extz.C \
