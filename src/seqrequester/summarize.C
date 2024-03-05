@@ -533,7 +533,7 @@ doSummarize(vector<char const *> &inputs,
   merylutil::allocateArray(shortLengths, shortLengthsLen, 1048576);
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
-    dnaSeqFile  *sf = new dnaSeqFile(inputs[ff]);
+    dnaSeqFile  *sf = openSequenceFile(inputs[ff]);
 
     //  If sequence,
     //    Count mono-, di- and tri-nucleotides.

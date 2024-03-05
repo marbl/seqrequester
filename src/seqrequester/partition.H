@@ -53,6 +53,7 @@ public:
   uint8   outputQV         = 20;
 
   uint32  numWriters       = 4;
+  uint32  compressionLevel = 1;
 
   char   *output1          = nullptr;
   char   *output2          = nullptr;

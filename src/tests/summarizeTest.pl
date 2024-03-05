@@ -12,6 +12,9 @@ my $tLength = 0;
 
 die "usage: $0 output-prefix\n"   if ($prefix eq "");
 
+my $seqidx = "aaaa";
+my $seqnum = "000000";
+
 open(F, "> $prefix.fasta");
 for (my $n=0; $n < 100000; $n++) {
     my $small = rand(1);
@@ -29,12 +32,21 @@ for (my $n=0; $n < 100000; $n++) {
     }
 
     push @lengths, $length;
+    $tLength += $length;
 
-    print F ">\n";
-    print F "A" x $length;
+    my $rem = $length % 10;
+
+    my $seq = "$seqidx$seqnum";   $seqidx++;
+
+    print F ">", $n+1, "\n";
+    while ($length > 0) {
+        print F $seq;
+        $seq++;
+        $length -= 5;
+    }
+    print F "z" x $rem;
     print F "\n";
 
-    $tLength += $length;
 }
 close(F);
 

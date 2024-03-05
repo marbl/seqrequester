@@ -109,8 +109,8 @@ extractParameters::showUsage(opMode mode) {
   fprintf(stderr, "    -sequences seqlist    select sequences with ordinal listed in the 'seqlist'\n");
   fprintf(stderr, "    -sequences namefile   select sequences with name listed in 'namefile'\n");
   fprintf(stderr, "\n");
-  fprintf(stderr,   "  -length min-max       select sequence if it is at least 'min' bases and at\n");
-  fprintf(stderr, "                          most 'max' bases long - that is, inclusive\n");
+  fprintf(stderr, "    -length min-max       select sequence if it is at least 'min' bases and at\n");
+  fprintf(stderr, "                          most 'max' bases long - that is, inclusive min-to-max\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "    -bases baselist       select bases listed in 'baselist' from each sequence\n");
   fprintf(stderr, "\n");
@@ -159,24 +159,28 @@ extractParameters::showUsage(opMode mode) {
 template<typename TT>
 void
 invertBgnEnd(std::vector<TT> &oBgn, std::vector<TT> &oEnd) {
-    std::vector<TT>  nBgn;
-    std::vector<TT>  nEnd;
+  std::vector<TT>  nBgn;
+  std::vector<TT>  nEnd;
 
-    if (oBgn[0] > 0) {                         //  If the first interval is not at the start, add
-      nBgn.push_back(0);                       //  a new interval covering the start of the
-      nEnd.push_back(oBgn[0]-1);               //  sequence.
-    }
+  if (oBgn.size() == 0)                      //  If no ranges, do nothing.
+    return;
 
-    oBgn.push_back(uint64max);                 //  Make the last new interval end at infinity.
+  if (oBgn[0] > 0) {                         //  If the first interval is not at the start, add
+    nBgn.push_back(0);                       //  a new interval covering the start of the
+    nEnd.push_back(oBgn[0]);                 //  sequence.
+  }
 
-    for (uint32 ii=0; ii<oEnd.size(); ii++) {  //  Loop over each interval, adding a new
-      nBgn.push_back(oEnd[ii]+1);              //  one covering the gap between ii and ii+1.
-      nEnd.push_back(oBgn[ii+1]-1);            //  The last new one we add is from the end
-    }                                          //  of th last interval to infinity.
+  oBgn.push_back(uint64max);                 //  Make the last new interval end at infinity.
 
-    oBgn = nBgn;
-    oEnd = nEnd;
+  for (uint32 ii=0; ii<oEnd.size(); ii++) {  //  Loop over each interval, adding a new
+    nBgn.push_back(oEnd[ii]);                //  one covering the gap between ii and ii+1.
+    nEnd.push_back(oBgn[ii+1]);              //  The last new one we add is from the end
+  }                                          //  of th last interval to infinity.
+
+  oBgn = nBgn;
+  oEnd = nEnd;
 }
+
 
 bool
 extractParameters::checkOptions(opMode mode, vector<char const *> &inputs, vector<char const *> &errors) {
@@ -187,88 +191,84 @@ extractParameters::checkOptions(opMode mode, vector<char const *> &inputs, vecto
   if (inputs.size() == 0)
     sprintf(errors, "ERROR:  No input sequence files supplied.\n");
 
-  //  Decode base ranges, invert if needed, but if none supplied, output all bases.
+  //  BASES
+  //   - space based
 
-  for (auto arg : baseArgs)
+  for (auto arg : baseArgs)                       //  Decode base ranges.
     decodeRange(arg, baseBgn, baseEnd);
 
-  if ((baseBgn.size() > 0) && (invertBaseList == true))
+  for (uint32 bi=0; bi<baseBgn.size(); bi++)      //  Fix a quirk in the decoding;
+    if (baseBgn[bi] == baseEnd[bi])               //  single numbers decode as bgn == end,
+      baseEnd[bi] += 1;                           //  but we need space-based.
+
+  for (uint32 bi=0; bi<baseBgn.size(); bi++)      //  Check for invalid ranges.
+    if (baseEnd[bi] <= baseBgn[bi])
+      sprintf(errors, "ERROR: base range %lu-%lu is invalid, must be increasing.\n",
+              baseBgn[bi], baseEnd[bi]);
+
+  if (invertBaseList == true)                     //  Invert ranges?
     invertBgnEnd(baseBgn, baseEnd);
 
-  if (baseBgn.size() == 0) {
-    baseBgn.push_back(0);
-    baseEnd.push_back(UINT64_MAX);
+  if (baseBgn.size() == 0) {                      //  Add default range of
+    baseBgn.push_back(0);                         //  "everything" if no ranges
+    baseEnd.push_back(UINT64_MAX);                //  supplied.
   }
 
-#if 1
+#if 0
   for (uint32 ii=0; ii<baseBgn.size(); ii++)
     fprintf(stderr, "BASES: #%02u - %4lu-%-4lu\n", ii, baseBgn[ii], baseEnd[ii]);
 #endif
 
-  //  Decode sequence ranges, invert if needed, but if none supplied, output all sequences.
+  //  SEQUENCES
+  //   - to the user, sequences begin at ONE and are inclusive.
+  //   - to us, sequences are C-style.
 
-  for (auto arg : seqsArgs) {
-    if (merylutil::fileExists(arg) == true)
+  for (auto arg : seqsArgs)                       //  Decode sequence ranges, either
+    if (merylutil::fileExists(arg) == true)       //  a file or an integer range.
       seqsName.load(arg, merylutil::splitWords);
     else
       decodeRange(arg, seqsBgn, seqsEnd);
-  }
 
-  if ((seqsBgn.size() > 0) && (invertSeqsList == true))
+  for (uint32 si=0; si<seqsBgn.size(); si++)      //  Check for invalid ranges.
+    if (seqsBgn[si] == 0)
+      sprintf(errors, "ERROR: sequences begin at 1, not zero.\n");
+
+  for (uint32 si=0; si<seqsBgn.size(); si++)      //  Convert to C-style.
+    seqsBgn[si] -= 1;
+
+  if (invertSeqsList == true)                     //  Invert ranges?
     invertBgnEnd(seqsBgn, seqsEnd);
 
-  if ((seqsName.size() == 0) && (seqsBgn.size() == 0)) {
-    seqsBgn.push_back(1);
+  if ((seqsName.size() == 0) &&                   //  Add default range of
+      (seqsBgn.size() == 0)) {                    //  "everything" if no ranges
+    seqsBgn.push_back(0);                         //  supplied.
     seqsEnd.push_back(UINT64_MAX);
   }
 
-#if 1
+#if 0
   for (uint32 ii=0; ii<seqsBgn.size(); ii++)
     fprintf(stderr, "SEQS:  #%02u - %4lu-%-4lu\n", ii, seqsBgn[ii], seqsEnd[ii]);
 #endif
 
-  //  Decode length ranges, but if none supplied, output all lengths.
+  //  LENGTHS
 
-  for (auto arg : lensArgs)
+  for (auto arg : lensArgs)                       //  Decode length ranges.
     decodeRange(arg, lensMin, lensMax);
 
-  if ((seqsBgn.size() > 0) && (invertLensList == true))
+  if (invertLensList == true)                     //  Invert ranges?
     invertBgnEnd(lensMin, lensMax);
 
-  if (lensMin.size() == 0) {
-    lensMin.push_back(0);
-    lensMax.push_back(UINT64_MAX);
+  if (lensMin.size() == 0) {                      //  Add default range of
+    lensMin.push_back(0);                         //  "everything" if no ranges
+    lensMax.push_back(UINT64_MAX);                //  supplied.
   }
 
-#if 1
+#if 0
   for (uint32 ii=0; ii<lensMin.size(); ii++)
     fprintf(stderr, "LENS:  #%02u - %4lu-%-4lu\n", ii, lensMin[ii], lensMax[ii]);
 #endif
 
-  //  Check and adjust the sequence ranges.
-  //
-  //  To the user, sequences begin at ONE, not ZERO.
-  //  To us, sequences begin at zero.
 
-  for (uint32 si=0; si<seqsBgn.size(); si++) {
-    if (seqsBgn[si] == 0)
-      sprintf(errors, "ERROR: sequences begin at 1, not zero.\n");
-
-    seqsBgn[si] -= 1;
-  }
-
-  //  Check and adjust the base ranges.  These are space based.  A quirk in the
-  //  command line parsing results in bgn == end if a single number is supplied;
-  //  we interpret that to mean 'output the base at space N'.
-
-  for (uint32 bi=0; bi<baseBgn.size(); bi++) {
-    if (baseBgn[bi] == baseEnd[bi])
-      baseEnd[bi] += 1;
-
-    if (baseEnd[bi] <= baseBgn[bi])
-      sprintf(errors, "ERROR: base range %lu-%lu is invalid, must be increasing.\n",
-              baseBgn[bi], baseEnd[bi]);
-  }
 
   //  Allocate a big string, but since we don't know the actual max length,
   //  we'll have to be careful to reallocate as needed.
@@ -337,7 +337,7 @@ extractParameters::isDesired(uint32      seqIndex,
   if (seqsBgn.size() > 0) {
     for (uint32 si=0; (desired == false) && (si < seqsBgn.size()); si++)
       if ((seqsBgn[si] <= seqIndex) &&
-          (seqIndex <= seqsEnd[si]))
+          (seqIndex < seqsEnd[si]))
         desired = true;
   }
 
@@ -448,25 +448,13 @@ doExtract(vector<char const *> &inputs,
   dnaSeq    seq;
 
   for (uint32 fi=0; fi<inputs.size(); fi++) {
-    dnaSeqFile  *sf   = new dnaSeqFile(inputs[fi], false);
+    dnaSeqFile  *sf  = openSequenceFile(inputs[fi], false);
 
-    //  If desired names exist or the file is compressed, load every sequence
-    //  and output a sequence if is desired.
-    //
-    if ((extPar.seqsName.size() > 0) || (sf->isIndexable() == false)) {
-      while (sf->loadSequence(seq) == true)
-        if (extPar.isDesired(sf->seqIdx(), seq.ident(), seq.length()))
-          printSequence(seq, sf, extPar);
-    }
+    //  If no desired names and an index was loaded, we can load exactly the
+    //  sequences to output.
 
-    //  But with no names and an index, we can load exactly the sequences we
-    //  want to output.  isDesired() here is only checking the length;
-    //  false from either findSequence() or loadSequence() should probably be
-    //  reported as errors.
-    //
-    else {
-      sf->generateIndex();
-
+    if ((extPar.seqsName.size() == 0) &&    //  Are not doing name lookups.
+        (sf->loadIndex() == true)) {        //  Do have an existing index.
       for (uint32 si=0; si<extPar.seqsBgn.size(); si++) {
         uint64  sbgn = min(extPar.seqsBgn[si], sf->numberOfSequences());
         uint64  send = min(extPar.seqsEnd[si], sf->numberOfSequences());
@@ -477,6 +465,15 @@ doExtract(vector<char const *> &inputs,
               sf->loadSequence(seq))
             printSequence(seq, sf, extPar);
       }
+    }
+
+    //  Otherwise (filtering based on sequence name or no index exists), we
+    //  must stream the whole file.
+
+    else {
+      while (sf->loadSequence(seq) == true)
+        if (extPar.isDesired(sf->seqIdx(), seq.ident(), seq.length()))
+          printSequence(seq, sf, extPar);
     }
 
     delete sf;

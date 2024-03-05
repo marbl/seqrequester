@@ -160,7 +160,7 @@ doMutate(vector<char const *> &inputs, mutateParameters &mutPar) {
   uint8     *nQuals = nullptr;
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
-    dnaSeqFile  *sf     = new dnaSeqFile(inputs[ff]);
+    dnaSeqFile  *sf     = openSequenceFile(inputs[ff]);
     uint64       num    = 0;
 
     while (sf->loadSequence(seq)) {

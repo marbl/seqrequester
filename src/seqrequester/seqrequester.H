@@ -38,6 +38,7 @@ using merylutil::sampledDistribution;
 
 using merylutil::dnaSeq;
 using merylutil::dnaSeqFile;
+using merylutil::openSequenceFile;
 
 enum opMode {
   modeSummarize,       //  Summarize sequences in FASTA or FASTQ inputs

@@ -309,8 +309,8 @@ doSample_paired(vector<char const *> &inputs, sampleParameters &samPar) {
   dnaSeq   seq2;
 
   for (uint32 ff=0; ff<inputs.size(); ff += 2) {
-    dnaSeqFile  *sf1 = new dnaSeqFile(inputs[ff+0]);
-    dnaSeqFile  *sf2 = new dnaSeqFile(inputs[ff+1]);
+    dnaSeqFile  *sf1 = openSequenceFile(inputs[ff+0]);
+    dnaSeqFile  *sf2 = openSequenceFile(inputs[ff+1]);
     uint64       num = 0;
 
     bool   sf1more = sf1->loadSequence(seq1);
@@ -342,8 +342,8 @@ doSample_paired(vector<char const *> &inputs, sampleParameters &samPar) {
   //  Scan the inputs again, this time emitting sequences if their saved length isn't zero.
 
   for (uint32 ff=0; ff<inputs.size(); ff += 2) {
-    dnaSeqFile  *sf1 = new dnaSeqFile(inputs[ff+0]);
-    dnaSeqFile  *sf2 = new dnaSeqFile(inputs[ff+1]);
+    dnaSeqFile  *sf1 = openSequenceFile(inputs[ff+0]);
+    dnaSeqFile  *sf2 = openSequenceFile(inputs[ff+1]);
     uint64       num = 0;
 
     bool   sf1more = sf1->loadSequence(seq1);
@@ -471,7 +471,7 @@ doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
   dnaSeq   seq1;
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
-    dnaSeqFile  *sf1 = new dnaSeqFile(inputs[ff]);
+    dnaSeqFile  *sf1 = openSequenceFile(inputs[ff]);
     uint64       num = 0;
 
     while (sf1->loadSequence(seq1)) {
@@ -506,7 +506,7 @@ doSample_single(vector<char const *> &inputs, sampleParameters &samPar) {
   fprintf(stderr, "Writing outputs.\n");
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
-    dnaSeqFile  *sf1 = new dnaSeqFile(inputs[ff]);
+    dnaSeqFile  *sf1 = openSequenceFile(inputs[ff]);
     uint64       num = 0;
 
     while (sf1->loadSequence(seq1) == true) {

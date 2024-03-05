@@ -266,7 +266,7 @@ doMicroSatellite(vector<char const *>     &inputs,
                  microsatelliteParameters &msPar) {
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
-    dnaSeqFile  *sf = new dnaSeqFile(inputs[ff]);
+    dnaSeqFile  *sf = openSequenceFile(inputs[ff]);
 
     if (msPar.report_legacy == false) {
       if      (msPar.report_ga == true)
@@ -352,8 +352,7 @@ main(int argc, char **argv) {
   }
 
   fprintf(stderr, "Open sequence '%s'.\n", seqName);
-  dnaSeqFile  *seqFile = nullptr;
-  seqFile = new dnaSeqFile(seqName);
+  dnaSeqFile  *seqFile = openSequenceFile(seqName);
 
   if (reportType == OP_GA)
     outGA(seqFile, outPrefix, verbose, window);

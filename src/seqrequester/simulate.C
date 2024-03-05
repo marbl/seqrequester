@@ -190,7 +190,7 @@ doSimulate_loadSequences(simulateParameters  &simPar,
   fprintf(stderr, "Loading sequences from '%s'\n", simPar.genomeName);
 
   dnaSeq           *seq    = new dnaSeq;
-  dnaSeqFile       *sf     = new dnaSeqFile(simPar.genomeName);
+  dnaSeqFile       *sf     = openSequenceFile(simPar.genomeName);
 
   for (; sf->loadSequence(*seq); seq = new dnaSeq) {
     seqs.push_back(seq);

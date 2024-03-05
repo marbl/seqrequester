@@ -147,7 +147,7 @@ openOutput(char const *pattern, uint32 index) {
     fprintf(stderr, "ERROR: Failed to find '#' in output pattern '%s', and asked to make multiple outputs.\n", pattern), exit(1);
 
   if  (pattern[ap] == 0)
-    return(new compressedFileWriter(pattern, 9));
+    return(new compressedFileWriter(pattern, 1));
 
   //  We've got #'s in the string.  We want to replace the last block of 'em
   //  with digits (ap found above is the start of the first block, sigh).
@@ -192,7 +192,7 @@ openOutput(char const *pattern, uint32 index) {
       name[ii] = digs[7 - dp--];
   }
 
-  return(new compressedFileWriter(name, 9));
+  return(new compressedFileWriter(name, 1));
 }
 
 
@@ -242,7 +242,7 @@ doPartition_single(vector<char const *> &inputs, partitionParameters &parPar) {
   dnaSeq   seq1;
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
-    dnaSeqFile  *sf1  = new dnaSeqFile(inputs[ff]);
+    dnaSeqFile  *sf1  = openSequenceFile(inputs[ff]);
     uint64       nseq = 0;
 
     while (sf1->loadSequence(seq1) == true) {
