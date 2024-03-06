@@ -25,7 +25,10 @@
 class extractParameters {
 public:
   extractParameters() {}
-  ~extractParameters() {}
+  ~extractParameters() {
+    delete [] outputBases;
+    delete [] outputQuals;
+  }
 
   bool      parseOption(opMode &mode, int32 &arg, int32 argc, char **argv);
   void      showUsage(opMode mode);
