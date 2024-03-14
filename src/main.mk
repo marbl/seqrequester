@@ -140,6 +140,10 @@ SRC_INCDIRS  := . \
                 seqrequester \
                 utility/src
 
+SYS_INCDIRS  += $(shell pkg-config --cflags-only-I openssl libcurl liblzma | sed s:-I/:/:g)
+LDFLAGS      += $(shell pkg-config --libs-only-L   openssl libcurl liblzma)
+LDLIBS       += $(shell pkg-config --libs-only-l   openssl libcurl liblzma) -lz -lbz2
+
 FILES += ../share/ultra-long-nanopore    -> share/seqrequester/ultra-long-nanopore \
          ../share/pacbio                 -> share/seqrequester/pacbio              \
          ../share/pacbio-hifi            -> share/seqrequester/pacbio-hifi
