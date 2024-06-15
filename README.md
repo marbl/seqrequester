@@ -11,7 +11,7 @@ modifying DNA sequences.
 ### Make
 ```
 git clone https://github.com/marbl/seqrequester.git
-cd src
+cd seqrequester/src
 make -j 12
 ```
 
