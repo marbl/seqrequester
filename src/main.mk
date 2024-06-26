@@ -1,5 +1,5 @@
 MODULE       := seqrequester
-VERSION      := snapshot 0.0
+VERSION      := snapshot v1.0
 VERSION_H    := utility/src/version.H
 
 TARGET       := libseqrequester.a
