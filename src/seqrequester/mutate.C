@@ -70,7 +70,7 @@ mutateParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv)
 void
 mutateParameters::showUsage(opMode mode) {
 
-  if (mode != modeMicroSatellite)
+  if (mode != modeMutate)
     return;
 
   fprintf(stderr, "OPTIONS for mutate mode:\n");
