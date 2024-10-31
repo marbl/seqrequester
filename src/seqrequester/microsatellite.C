@@ -69,11 +69,15 @@ microsatelliteParameters::showUsage(opMode mode) {
 
   fprintf(stderr, "OPTIONS for microsatellite mode:\n");
   fprintf(stderr, "  -prefix P      write output to <P>.<pattern>.bed\n");
-  fprintf(stderr, "  -window w      compute in windows of size w; default write output to <prefix.<pattern>.bed\n");
-
+  fprintf(stderr, "  -window w      compute in windows of size w; default 128\n");
+  fprintf(stderr, "\n");
   fprintf(stderr, "  -ga            compute GA/TC repeat content\n");
   fprintf(stderr, "  -gc            compute GC repeat content\n");
   fprintf(stderr, "  -at            compute AT repeat content\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  Only ONE INPUT FILE is supported.\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  If input is from stdin, exactly one of -ga, -gc and -at is allowed.\n");
 }
 
 
@@ -86,6 +90,9 @@ microsatelliteParameters::checkOptions(opMode mode, vector<char const *> &inputs
 
   if (inputs.size() == 0)
     sprintf(errors, "ERROR:  No input sequence files supplied.\n");
+
+  if (inputs.size() != 1)
+    sprintf(errors, "ERROR:  Exactly one input sequence file is supported.\n");
 
   if ((report_ga == false) &&
       (report_gc == false) &&
@@ -214,12 +221,15 @@ computeMicroSat(dnaSeq    &seq,
               wcr[ww],
               wcr[ww] * 100.0 / window);
   }
+
+  delete [] wcr;
+  delete [] wcf;
 }
 
 
 
 void
-computeMicroSat(dnaSeqFile *seqFile,
+computeMicroSat(char const *seqFileName,
                 char const *outPrefix,
                 char const  f1, char const  f2,
                 char const  r1, char const  r2,
@@ -239,17 +249,23 @@ computeMicroSat(dnaSeqFile *seqFile,
   //  Open files.  If the fwd and rev letters are the same, only
   //  open one set of files.
 
+  dnaSeqFile  *sf = openSequenceFile(seqFileName);
+
   FILE *fwdBfile =              merylutil::openOutputFile(fwdBname);
   FILE *fwdWfile =              merylutil::openOutputFile(fwdWname);
 
   FILE *revBfile = (f1 != f2) ? merylutil::openOutputFile(revBname) : nullptr;
   FILE *revWfile = (r1 != r2) ? merylutil::openOutputFile(revWname) : nullptr;
 
-  for (dnaSeq seq; (seqFile->loadSequence(seq) == true); )
+  fprintf(stderr, "%s -> %s\n", seqFileName, fwdBname);
+
+  for (dnaSeq seq; (sf->loadSequence(seq) == true); )
     computeMicroSat(seq,
                     f1, f2, fwdBfile, fwdWfile,
                     r1, r2, revBfile, revWfile,
                     window);
+
+  delete sf;
 
   merylutil::closeFile(fwdBfile);
   merylutil::closeFile(fwdWfile);
@@ -266,109 +282,16 @@ doMicroSatellite(vector<char const *>     &inputs,
                  microsatelliteParameters &msPar) {
 
   for (uint32 ff=0; ff<inputs.size(); ff++) {
-    dnaSeqFile  *sf = openSequenceFile(inputs[ff]);
-
     if (msPar.report_legacy == false) {
-      if      (msPar.report_ga == true)
-        computeMicroSat(sf, msPar.outPrefix, 'G', 'A', 'T', 'C', msPar.window);
-      else if (msPar.report_gc == true)
-        computeMicroSat(sf, msPar.outPrefix, 'G', 'C', 'G', 'C', msPar.window);
-      else if (msPar.report_at == true)
-        computeMicroSat(sf, msPar.outPrefix, 'A', 'T', 'A', 'T', msPar.window);
+      if (msPar.report_ga == true)  computeMicroSat(inputs[ff], msPar.outPrefix, 'G', 'A', 'T', 'C', msPar.window);
+      if (msPar.report_gc == true)  computeMicroSat(inputs[ff], msPar.outPrefix, 'G', 'C', 'G', 'C', msPar.window);
+      if (msPar.report_at == true)  computeMicroSat(inputs[ff], msPar.outPrefix, 'A', 'T', 'A', 'T', msPar.window);
     }
 
     else {
-      if      (msPar.report_ga == true)
-        outGA(sf, msPar.outPrefix, msPar.window);
-      else if (msPar.report_gc == true)
-        outGC(sf, msPar.outPrefix, msPar.window);
-      else if (msPar.report_at == true)
-        outAT(sf, msPar.outPrefix, msPar.window);
+      if (msPar.report_ga == true)  outGA(inputs[ff], msPar.outPrefix, msPar.window);
+      if (msPar.report_gc == true)  outGC(inputs[ff], msPar.outPrefix, msPar.window);
+      if (msPar.report_at == true)  outAT(inputs[ff], msPar.outPrefix, msPar.window);
     }
-
-    delete sf;
   }
 }
-
-
-
-
-
-#if 0
-int
-main(int argc, char **argv) {
-  char   *seqName     = nullptr;
-  char   *outPrefix   = nullptr;
-  bool    verbose     = false;
-  uint32  reportType  = OP_NONE;
-  int     window      = 128;
-
-  argc = AS_configure(argc, argv);
-
-  std::vector<char const *>  err;
-  int                        arg = 1;
-  while (arg < argc) {
-    if (strcmp(argv[arg], "-seq") == 0) {
-      seqName = argv[++arg];
-
-    } else if (strcmp(argv[arg], "-prefix") == 0) {
-      outPrefix = argv[++arg];
-
-    } else if (strcmp(argv[arg], "-ga") == 0) {
-      reportType = OP_GA;
-
-    } else if (strcmp(argv[arg], "-gc") == 0) {
-      reportType = OP_GC;
-    
-    } else if (strcmp(argv[arg], "-at") == 0) {
-      reportType = OP_AT;
-
-
-    } else if (strcmp(argv[arg], "-window") == 0) {
-      window = atoi(argv[++arg]);
-
-    } else {
-      char *s = new char [1024];
-      snprintf(s, 1024, "Unknown option '%s'.\n", argv[arg]);
-      err.push_back(s);
-    }
-
-    arg++;
-  }
-
-  if (seqName == nullptr)
-    err.push_back("No input sequence (-seq) supplied.\n");
-
-  if (err.size() > 0) {
-    fprintf(stderr, "usage: %s -seq <in.fasta> -prefix <prefix> (-ga | -gc | -at) \n", argv[0]);
-    fprintf(stderr, "  outputs ga/tc, gc, at dimer region\n");
-    fprintf(stderr, "\n");
-
-    for (uint32 ii=0; ii<err.size(); ii++)
-      if (err[ii])
-        fputs(err[ii], stderr);
-
-    exit(1);
-  }
-
-  fprintf(stderr, "Open sequence '%s'.\n", seqName);
-  dnaSeqFile  *seqFile = openSequenceFile(seqName);
-
-  if (reportType == OP_GA)
-    outGA(seqFile, outPrefix, verbose, window);
-
-  if (reportType == OP_GC)
-    outGC(seqFile, outPrefix, verbose, window);
-
-  if (reportType == OP_AT)
-    outAT(seqFile, outPrefix, verbose, window);
-
-  fprintf(stderr, "Clean up..\n\n");
-
-  delete seqFile;
-
-  fprintf(stderr, "Bye!\n");
-
-  exit(0);
-}
-#endif
