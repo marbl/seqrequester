@@ -1,5 +1,5 @@
 void
-outGA(dnaSeqFile   *seqFile,
+outGA(char const   *seqFileName,
       char const   *outPrefix,
       int           window) {
 
@@ -18,7 +18,8 @@ outGA(dnaSeqFile   *seqFile,
   sprintf(outName, "%s.TC.%u.bed", outPrefix, window);
   FILE *fTCw = merylutil::openOutputFile(outName);
 
-  dnaSeq    seq;
+  dnaSeqFile *seqFile = openSequenceFile(seqFileName);
+  dnaSeq      seq;
 
   while (seqFile->loadSequence(seq) == true) {
     const char* bases = seq.bases();
@@ -28,8 +29,8 @@ outGA(dnaSeqFile   *seqFile,
 
     fprintf(stderr, "Processing %s\n", seq.ident());
     int     winMax = seq.length()/window + 1;
-    uint32  gaWinCounts[winMax];
-    uint32  tcWinCounts[winMax];
+    uint32 *gaWinCounts = new uint32 [winMax];
+    uint32 *tcWinCounts = new uint32 [winMax];
 
     int64     begGA = -1, endGA = -1;
     int64     begTC = -1, endTC = -1;
@@ -126,7 +127,11 @@ outGA(dnaSeqFile   *seqFile,
       fprintf(fTCw, "%s\t%u\t%u\t%u\t%.2f\n", seq.ident(), ii*window, (ii+1) * window, tcWinCounts[ii], ((float) tcWinCounts[ii] * 100) / window);
     }
 
+    delete [] gaWinCounts;
+    delete [] tcWinCounts;
   }
+
+  delete seqFile;
 
   fclose(fGA);
   fclose(fTC);
