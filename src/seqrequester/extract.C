@@ -48,6 +48,10 @@ extractParameters::parseOption(opMode &mode, int32 &arg, int32 argc, char **argv
     invertBaseList = true;
   }
 
+  else if ((mode == modeExtract) && (strcmp(argv[arg], "-full-header") == 0)) {
+    asIdentOnly = false;
+  }
+
   else if ((mode == modeExtract) && (strcmp(argv[arg], "-reverse") == 0)) {
     asReverse = true;
   }
@@ -119,6 +123,8 @@ extractParameters::showUsage(opMode mode) {
   fprintf(stderr, "    -invert-baselist      select all unselected bases for output\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "  OUTPUT FORMAT:\n");
+  fprintf(stderr, "    -full-header          output the full header line instead of the first word\n");
+  fprintf(stderr, "\n");
   fprintf(stderr, "    -reverse              reverse the bases in the sequence\n");
   fprintf(stderr, "    -complement           complement the bases in the sequence\n");
   fprintf(stderr, "    -rc                   alias for -reverse -complement\n");
@@ -433,11 +439,13 @@ printSequence(dnaSeq &seq,
 
   if (extPar.outputBasesLen > 0)
     merylutil::outputSequence(stdout,
-                              seq.ident(), extPar.outputBases, extPar.outputQuals, extPar.outputBasesLen,
+                              extPar.asIdentOnly ? seq.ident() : seq.header(),
+                              extPar.outputBases, extPar.outputQuals, extPar.outputBasesLen,
                               sf->isFASTQ(),
                               extPar.outputFASTA,
                               extPar.outputFASTQ,
                               extPar.outputQV);
+  //fprintf(stderr, "\033{%d;20H%9u bp - %s\n", seq.length(), seq.header());
 }
 
 

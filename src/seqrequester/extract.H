@@ -61,6 +61,8 @@ public:
   bool                       invertLensList  = false;
   bool                       invertBaseList = false;
 
+  bool                       asIdentOnly  = true;
+
   bool                       asReverse    = false;
   bool                       asComplement = false;
 
