@@ -223,7 +223,7 @@ define ADD_TARGET_RULE
 
     ifneq ($(origin BUILDRELEASE), undefined)
     ifeq (${OSTYPE}, Darwin)
-      ${1}_POSTMAKE = ../scripts/statify $${TARGET_DIR}/lib $${TARGET_DIR}/${1}
+      ${1}_POSTMAKE = utility/scripts/statify $${TARGET_DIR}/lib $${TARGET_DIR}/${1}
     endif
     endif
 
